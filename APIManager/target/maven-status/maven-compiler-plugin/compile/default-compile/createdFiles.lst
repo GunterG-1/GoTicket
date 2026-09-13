@@ -1,0 +1,16 @@
+com\duoc\apimanager\model\ApiRoute.class
+com\duoc\apimanager\ApiManagerApplication.class
+com\duoc\apimanager\service\RateLimiterService$RequestWindow.class
+com\duoc\apimanager\controller\GatewayController.class
+com\duoc\apimanager\controller\MockBackendController.class
+com\duoc\apimanager\model\ApiLog.class
+com\duoc\apimanager\controller\ApiKeyController.class
+com\duoc\apimanager\repository\ApiKeyRepository.class
+com\duoc\apimanager\controller\ApiRouteController.class
+com\duoc\apimanager\repository\ApiRouteRepository.class
+com\duoc\apimanager\model\ApiKey.class
+com\duoc\apimanager\service\ProxyService.class
+com\duoc\apimanager\service\RateLimiterService.class
+com\duoc\apimanager\controller\ApiLogController.class
+com\duoc\apimanager\repository\ApiLogRepository.class
+com\duoc\apimanager\config\DataInitializer.class

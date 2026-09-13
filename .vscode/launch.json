@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ApiManagerApplication<APIManager>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.GoTicket.ApiManager.ApiManagerApplication",
+            "projectName": "APIManager",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

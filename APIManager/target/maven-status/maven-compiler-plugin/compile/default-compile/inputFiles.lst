@@ -1,0 +1,15 @@
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\model\ApiRoute.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\controller\MockBackendController.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\service\RateLimiterService.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\repository\ApiLogRepository.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\ApiManagerApplication.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\controller\ApiKeyController.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\model\ApiLog.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\service\ProxyService.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\controller\GatewayController.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\model\ApiKey.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\controller\ApiLogController.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\controller\ApiRouteController.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\config\DataInitializer.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\repository\ApiRouteRepository.java
+C:\Users\Javier\Documents\DUOC\clases\APIManager\src\main\java\com\duoc\apimanager\repository\ApiKeyRepository.java

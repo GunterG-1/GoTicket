@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Manager - Spring Boot Gateway</title>
+    <!-- Fonts Google: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0f1d;
+            --bg-secondary: #121a2d;
+            --bg-card: rgba(22, 31, 53, 0.75);
+            --bg-card-hover: rgba(30, 42, 70, 0.85);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(99, 102, 241, 0.3);
+            
+            --accent-indigo: #6366f1;
+            --accent-indigo-hover: #4f46e5;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --accent-amber: #f59e0b;
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            
+            --font-title: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            
+            --glass-blur: blur(16px);
+            --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-body);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Bar */
+        header {
+            background: rgba(10, 15, 29, 0.85);
+            backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+
+        .brand-title {
+            font-family: var(--font-title);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 30%, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            color: var(--accent-indigo);
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            font-weight: 500;
+            padding: 0.6rem 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-btn.active {
+            color: #fff;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--border-highlight);
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-indigo-hover));
+            color: white;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--text-muted);
+        }
+
+        /* Container Layout */
+        main {
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2rem;
+            flex: 1;
+        }
+
+        /* KPI Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--border-highlight);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .kpi-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .kpi-info h2 {
+            font-family: var(--font-title);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .kpi-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .icon-indigo { background: rgba(99, 102, 241, 0.15); color: var(--accent-indigo); }
+        .icon-emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+        .icon-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); }
+        .icon-amber { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+
+        /* Content Sections */
+        .section-pane {
+            display: none;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .section-pane.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-panel {
+            background: var(--bg-card);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .panel-title {
+            font-family: var(--font-title);
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Tables */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badges & Tags */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-danger { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); border: 1px solid rgba(244, 63, 94, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-info { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+
+        .code-tag {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: var(--accent-cyan);
+            font-size: 0.85rem;
+        }
+
+        /* Sandbox Gateway Tester */
+        .tester-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .tester-grid { grid-template-columns: 1fr; }
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(10, 15, 29, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-indigo);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            font-family: monospace;
+        }
+
+        .response-box {
+            background: #060913;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            min-height: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.88rem;
+            color: #a7f3d0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: var(--glass-blur);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-highlight);
+            border-radius: 18px;
+            width: 90%;
+            max-width: 550px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            animation: modalIn 0.25s ease forwards;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-family: var(--font-title);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .close-btn:hover { color: #fff; }
+
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-network-wired"></i>
+            </div>
+            <div>
+                <div class="brand-title">Spring Boot API Manager</div>
+                <span class="brand-badge">DUOC UC &bull; Gateway Platform</span>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <button class="nav-btn active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+            <button class="nav-btn" onclick="switchTab('routes')"><i class="fa-solid fa-route"></i> Rutas Proxy</button>
+            <button class="nav-btn" onclick="switchTab('keys')"><i class="fa-solid fa-key"></i> API Keys</button>
+            <button class="nav-btn" onclick="switchTab('sandbox')"><i class="fa-solid fa-vial"></i> Sandbox Gateway</button>
+            <button class="nav-btn" onclick="switchTab('logs')"><i class="fa-solid fa-list-check"></i> Auditoría Logs</button>
+        </nav>
+
+        <div class="top-actions">
+            <a href="/swagger-ui.html" target="_blank" class="btn btn-outline">
+                <i class="fa-solid fa-code"></i> Swagger Docs
+            </a>
+            <a href="/h2-console" target="_blank" class="btn btn-outline">
+                <i class="fa-solid fa-database"></i> BD H2
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <p>APIs Registradas</p>
+                    <h2 id="kpi-routes-count">0</h2>
+                </div>
+                <div class="kpi-icon icon-indigo">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <p>API Keys Activas</p>
+                    <h2 id="kpi-keys-count">0</h2>
+                </div>
+                <div class="kpi-icon icon-emerald">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <p>Total Peticiones</p>
+                    <h2 id="kpi-requests-count">0</h2>
+                </div>
+                <div class="kpi-icon icon-cyan">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-info">
+                    <p>Latencia Promedio</p>
+                    <h2 id="kpi-latency">0 ms</h2>
+                </div>
+                <div class="kpi-icon icon-amber">
+                    <i class="fa-solid fa-stopwatch"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Dashboard General -->
+        <div id="tab-dashboard" class="section-pane active">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-tower-broadcast" style="color: var(--accent-indigo);"></i>
+                        Visión General del API Gateway
+                    </div>
+                    <button class="btn btn-primary" onclick="openRouteModal()">
+                        <i class="fa-solid fa-plus"></i> Nueva Ruta API
+                    </button>
+                </div>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Este API Manager enruta dinámicamente las solicitudes hacia microservicios backend y APIs externas, aplicando control de acceso mediante <strong>API Key</strong>, limitación de frecuencia (<strong>Rate Limiting</strong>) y registro de auditoría en tiempo real.
+                </p>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre API</th>
+                                <th>Patrón Proxy</th>
+                                <th>URL Destino</th>
+                                <th>API Key</th>
+                                <th>Rate Limit</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-routes-tbody">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Rutas Proxy -->
+        <div id="tab-routes" class="section-pane">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-route" style="color: var(--accent-indigo);"></i>
+                        Administración de Rutas Enrutadas
+                    </div>
+                    <button class="btn btn-primary" onclick="openRouteModal()">
+                        <i class="fa-solid fa-plus"></i> Registrar API
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Patrón Proxy (/api/proxy/...)</th>
+                                <th>URL Destino Backend</th>
+                                <th>Requiere Key</th>
+                                <th>Límite / min</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-routes-tbody">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: API Keys -->
+        <div id="tab-keys" class="section-pane">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-key" style="color: var(--accent-emerald);"></i>
+                        Gestión de API Keys para Clientes
+                    </div>
+                    <button class="btn btn-primary" onclick="openKeyModal()">
+                        <i class="fa-solid fa-key"></i> Generar API Key
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Llave de Acceso (X-API-KEY)</th>
+                                <th>Cliente / Propietario</th>
+                                <th>Cuota / min</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-keys-tbody">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Sandbox Gateway -->
+        <div id="tab-sandbox" class="section-pane">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-vial" style="color: var(--accent-cyan);"></i>
+                        Sandbox de Pruebas Gateway
+                    </div>
+                </div>
+                <div class="tester-grid">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Ruta Proxy a probar</label>
+                            <select id="sandbox-route-select" class="form-control" onchange="onSandboxRouteSelect()">
+                                <!-- Injected JS -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Método HTTP</label>
+                            <select id="sandbox-method" class="form-control">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Header X-API-KEY (Opcional o Requerido)</label>
+                            <select id="sandbox-key-select" class="form-control">
+                                <option value="">Sin API Key (Anónimo)</option>
+                                <!-- Injected JS -->
+                            </select>
+                        </div>
+
+                        <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="executeSandboxTest()">
+                            <i class="fa-solid fa-paper-plane"></i> Enviar Petición al Gateway
+                        </button>
+                    </div>
+
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="form-label">Respuesta del Gateway</label>
+                            <span id="sandbox-status-badge" class="badge badge-info">Esperando ejecución</span>
+                        </div>
+                        <div id="sandbox-response" class="response-box">// Presiona 'Enviar Petición' para probar el enrutamiento...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Logs -->
+        <div id="tab-logs" class="section-pane">
+            <div class="card-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-list-check" style="color: var(--accent-amber);"></i>
+                        Registro de Auditoría de Peticiones
+                    </div>
+                    <button class="btn btn-outline" onclick="loadLogs()">
+                        <i class="fa-solid fa-rotate-right"></i> Actualizar
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha / Hora</th>
+                                <th>Método</th>
+                                <th>Ruta Recibida</th>
+                                <th>URL Destino Reenviada</th>
+                                <th>Status</th>
+                                <th>Latencia</th>
+                                <th>API Key Usada</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <!-- Injected JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Nueva Ruta -->
+    <div id="modal-route" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">Registrar Nueva API</h3>
+                <button class="close-btn" onclick="closeRouteModal()">&times;</button>
+            </div>
+            <form id="form-route" onsubmit="saveRoute(event)">
+                <div class="form-group">
+                    <label class="form-label">Nombre de la API</label>
+                    <input type="text" id="route-name" class="form-control" placeholder="Ej: Servicio Clientes" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Patrón de Ruta Proxy (Ej: clientes)</label>
+                    <input type="text" id="route-path" class="form-control" placeholder="clientes" required>
+                    <small style="color: var(--text-dim);">La API se expondrá en <code>/api/proxy/clientes</code></small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL Backend Destino</label>
+                    <input type="url" id="route-target" class="form-control" placeholder="http://localhost:8080/api/mock/users" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Límite de Peticiones (por minuto)</label>
+                    <input type="number" id="route-limit" class="form-control" value="60" min="1">
+                </div>
+                <div class="form-group" style="display: flex; gap: 10px; align-items: center;">
+                    <input type="checkbox" id="route-auth" style="width: 18px; height: 18px; accent-color: var(--accent-indigo);">
+                    <label for="route-auth" style="color: var(--text-main); font-size: 0.9rem; cursor: pointer;">Requiere API Key obligatoria (Header X-API-KEY)</label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeRouteModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar API</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Key -->
+    <div id="modal-key" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">Generar Nueva API Key</h3>
+                <button class="close-btn" onclick="closeKeyModal()">&times;</button>
+            </div>
+            <form id="form-key" onsubmit="saveKey(event)">
+                <div class="form-group">
+                    <label class="form-label">Cliente / Propietario</label>
+                    <input type="text" id="key-owner" class="form-control" placeholder="Ej: Empresa ACME Corp" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Cuota Máxima por Minuto</label>
+                    <input type="number" id="key-limit" class="form-control" value="100" min="1">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeKeyModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Generar Llave</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        API Manager & Gateway Ejemplo &bull; Proyecto Spring Boot DUOC UC
+    </footer>
+
+    <script>
+        let cachedRoutes = [];
+        let cachedKeys = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllData();
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section-pane').forEach(pane => pane.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        async function loadAllData() {
+            await Promise.all([loadRoutes(), loadKeys(), loadStats(), loadLogs()]);
+            populateSandboxSelects();
+        }
+
+        async function loadRoutes() {
+            try {
+                const res = await fetch('/api/v1/routes');
+                cachedRoutes = await res.json();
+                document.getElementById('kpi-routes-count').innerText = cachedRoutes.length;
+
+                renderRoutesTable(cachedRoutes);
+            } catch (err) {
+                console.error("Error al cargar rutas:", err);
+            }
+        }
+
+        function renderRoutesTable(routes) {
+            const tbodyDash = document.getElementById('dash-routes-tbody');
+            const tbodyAll = document.getElementById('all-routes-tbody');
+            
+            tbodyDash.innerHTML = '';
+            tbodyAll.innerHTML = '';
+
+            routes.forEach(r => {
+                const statusBadge = r.enabled 
+                    ? '<span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Activa</span>' 
+                    : '<span class="badge badge-danger"><i class="fa-solid fa-circle-pause"></i> Inactiva</span>';
+
+                const keyBadge = r.requiresApiKey 
+                    ? '<span class="badge badge-warning"><i class="fa-solid fa-lock"></i> Requerida</span>' 
+                    : '<span class="badge badge-info"><i class="fa-solid fa-lock-open"></i> Pública</span>';
+
+                // Dashboard summary row
+                tbodyDash.innerHTML += `
+                    <tr>
+                        <td><strong>${r.name}</strong></td>
+                        <td><span class="code-tag">/api/proxy/${r.pathPattern}</span></td>
+                        <td style="color: var(--text-muted);">${r.targetUrl}</td>
+                        <td>${keyBadge}</td>
+                        <td>${r.rateLimitPerMinute} req/min</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.78rem;" onclick="toggleRoute(${r.id})">
+                                ${r.enabled ? 'Deshabilitar' : 'Habilitar'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                // All routes tab row
+                tbodyAll.innerHTML += `
+                    <tr>
+                        <td>#${r.id}</td>
+                        <td><strong>${r.name}</strong></td>
+                        <td><span class="code-tag">/api/proxy/${r.pathPattern}</span></td>
+                        <td>${r.targetUrl}</td>
+                        <td>${keyBadge}</td>
+                        <td>${r.rateLimitPerMinute}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.78rem;" onclick="toggleRoute(${r.id})">
+                                ${r.enabled ? 'Desactivar' : 'Activar'}
+                            </button>
+                            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.78rem; color: var(--accent-rose);" onclick="deleteRoute(${r.id})">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function loadKeys() {
+            try {
+                const res = await fetch('/api/v1/keys');
+                cachedKeys = await res.json();
+                const activeCount = cachedKeys.filter(k => k.active).length;
+                document.getElementById('kpi-keys-count').innerText = activeCount;
+
+                const tbody = document.getElementById('all-keys-tbody');
+                tbody.innerHTML = '';
+
+                cachedKeys.forEach(k => {
+                    const statusBadge = k.active 
+                        ? '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Activa</span>'
+                        : '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Revocada</span>';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>#${k.id}</td>
+                            <td><span class="code-tag">${k.keyString}</span></td>
+                            <td><strong>${k.ownerName}</strong></td>
+                            <td>${k.rateLimitPerMinute} req/min</td>
+                            <td>${statusBadge}</td>
+                            <td>
+                                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.78rem;" onclick="toggleKey(${k.id})">
+                                    ${k.active ? 'Revocar' : 'Reactivar'}
+                                </button>
+                                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.78rem; color: var(--accent-rose);" onclick="deleteKey(${k.id})">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error al cargar llaves:", err);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/v1/logs/stats');
+                const stats = await res.json();
+                document.getElementById('kpi-requests-count').innerText = stats.totalRequests || 0;
+                document.getElementById('kpi-latency').innerText = (stats.averageLatencyMs || 0) + ' ms';
+            } catch (err) {
+                console.error("Error al cargar stats:", err);
+            }
+        }
+
+        async function loadLogs() {
+            try {
+                const res = await fetch('/api/v1/logs');
+                const logs = await res.json();
+                const tbody = document.getElementById('logs-tbody');
+                tbody.innerHTML = '';
+
+                logs.forEach(l => {
+                    const isSuccess = l.responseStatus >= 200 && l.responseStatus < 300;
+                    const statusBadge = isSuccess 
+                        ? `<span class="badge badge-success">${l.responseStatus}</span>` 
+                        : `<span class="badge badge-danger">${l.responseStatus}</span>`;
+
+                    const dateStr = new Date(l.timestamp).toLocaleTimeString();
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="color: var(--text-dim);">${dateStr}</td>
+                            <td><span class="badge badge-info">${l.httpMethod}</span></td>
+                            <td><span class="code-tag">${l.requestPath}</span></td>
+                            <td style="color: var(--text-muted); font-size: 0.85rem;">${l.targetUrl}</td>
+                            <td>${statusBadge}</td>
+                            <td>${l.executionTimeMs} ms</td>
+                            <td><code>${l.apiKeyUsed}</code></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error("Error al cargar logs:", err);
+            }
+        }
+
+        function populateSandboxSelects() {
+            const routeSel = document.getElementById('sandbox-route-select');
+            const keySel = document.getElementById('sandbox-key-select');
+
+            routeSel.innerHTML = '';
+            cachedRoutes.forEach(r => {
+                routeSel.innerHTML += `<option value="${r.pathPattern}">${r.name} (/api/proxy/${r.pathPattern})</option>`;
+            });
+
+            keySel.innerHTML = '<option value="">Sin API Key (Anónimo)</option>';
+            cachedKeys.forEach(k => {
+                if (k.active) {
+                    keySel.innerHTML += `<option value="${k.keyString}">${k.ownerName} (${k.keyString})</option>`;
+                }
+            });
+        }
+
+        function onSandboxRouteSelect() {}
+
+        async function executeSandboxTest() {
+            const pattern = document.getElementById('sandbox-route-select').value;
+            const method = document.getElementById('sandbox-method').value;
+            const apiKey = document.getElementById('sandbox-key-select').value;
+            const respBox = document.getElementById('sandbox-response');
+            const badge = document.getElementById('sandbox-status-badge');
+
+            if (!pattern) {
+                alert("Selecciona una ruta primero");
+                return;
+            }
+
+            respBox.innerText = "// Enviando petición...";
+            badge.className = "badge badge-warning";
+            badge.innerText = "Procesando...";
+
+            const url = '/api/proxy/' + pattern;
+            const headers = {};
+            if (apiKey) {
+                headers['X-API-KEY'] = apiKey;
+            }
+
+            const startTime = performance.now();
+            try {
+                const res = await fetch(url, { method, headers });
+                const endTime = performance.now();
+                const latency = Math.round(endTime - startTime);
+
+                const statusText = `${res.status} ${res.statusText} (${latency} ms)`;
+                badge.innerText = statusText;
+                badge.className = res.ok ? "badge badge-success" : "badge badge-danger";
+
+                const data = await res.json();
+                respBox.innerText = JSON.stringify(data, null, 2);
+
+                loadStats();
+                loadLogs();
+            } catch (err) {
+                badge.innerText = "Error de Conexión";
+                badge.className = "badge badge-danger";
+                respBox.innerText = "Error: " + err.message;
+            }
+        }
+
+        /* Modal Handlers */
+        function openRouteModal() { document.getElementById('modal-route').style.display = 'flex'; }
+        function closeRouteModal() { document.getElementById('modal-route').style.display = 'none'; }
+        function openKeyModal() { document.getElementById('modal-key').style.display = 'flex'; }
+        function closeKeyModal() { document.getElementById('modal-key').style.display = 'none'; }
+
+        async function saveRoute(e) {
+            e.preventDefault();
+            const body = {
+                name: document.getElementById('route-name').value,
+                pathPattern: document.getElementById('route-path').value,
+                targetUrl: document.getElementById('route-target').value,
+                rateLimitPerMinute: parseInt(document.getElementById('route-limit').value),
+                requiresApiKey: document.getElementById('route-auth').checked,
+                enabled: true
+            };
+
+            const res = await fetch('/api/v1/routes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                closeRouteModal();
+                document.getElementById('form-route').reset();
+                loadAllData();
+            } else {
+                const err = await res.text();
+                alert("Error: " + err);
+            }
+        }
+
+        async function saveKey(e) {
+            e.preventDefault();
+            const body = {
+                ownerName: document.getElementById('key-owner').value,
+                rateLimitPerMinute: parseInt(document.getElementById('key-limit').value),
+                active: true
+            };
+
+            const res = await fetch('/api/v1/keys', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                closeKeyModal();
+                document.getElementById('form-key').reset();
+                loadAllData();
+            } else {
+                alert("Error al crear la API Key");
+            }
+        }
+
+        async function toggleRoute(id) {
+            await fetch(`/api/v1/routes/${id}/toggle`, { method: 'PATCH' });
+            loadAllData();
+        }
+
+        async function deleteRoute(id) {
+            if (confirm("¿Seguro de eliminar esta ruta API?")) {
+                await fetch(`/api/v1/routes/${id}`, { method: 'DELETE' });
+                loadAllData();
+            }
+        }
+
+        async function toggleKey(id) {
+            await fetch(`/api/v1/keys/${id}/toggle`, { method: 'PATCH' });
+            loadAllData();
+        }
+
+        async function deleteKey(id) {
+            if (confirm("¿Seguro de revocar esta API Key?")) {
+                await fetch(`/api/v1/keys/${id}`, { method: 'DELETE' });
+                loadAllData();
+            }
+        }
+    </script>
+</body>
+</html>

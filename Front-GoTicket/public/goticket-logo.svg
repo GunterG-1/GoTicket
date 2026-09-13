@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">GoTicket</title>
+  <desc id="desc">Logotipo azul GT de GoTicket</desc>
+  <path fill="#ffffff" d="M92 253c0-76 62-138 138-138h113l-39 52h-74c-47 0-85 38-85 86s38 86 85 86h24v-48h-61v-51h119v150H230c-76 0-138-61-138-137Z"/>
+  <path fill="#ffffff" d="M282 115h142l-40 52h-50v224h-61V167h-31l40-52Z"/>
+</svg>
