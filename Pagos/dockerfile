@@ -1,0 +1,20 @@
+# Etapa 1: Compilación
+FROM eclipse-temurin:17-jdk-alpine AS build
+WORKDIR /app
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+# Asegurar permisos de ejecución
+RUN chmod +x ./mvnw
+# Descargar dependencias
+RUN ./mvnw dependency:go-offline
+COPY src ./src
+# Compilar el proyecto
+RUN ./mvnw clean package -DskipTests
+
+# Etapa 2: Ejecución
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+ENV SERVER_PORT=8080
+EXPOSE ${SERVER_PORT}
+ENTRYPOINT ["java", "-jar", "app.jar"]

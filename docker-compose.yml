@@ -1,158 +1,94 @@
+version: '3.8'
 services:
-  mysql:
-    image: mysql:8.4
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
-      MYSQL_USER: ${MYSQL_USER:-goticket}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-
   rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+    image: rabbitmq:3-management-alpine
+    container_name: goticket_rabbit
+    restart: unless-stopped
+    env_file: .env.backend
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-goticket}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-this-password}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
     ports:
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+      - "5672:5672"
 
+  # ¡Nuevo contenedor de Redis añadido!
   redis:
-    image: redis:7-alpine
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-this-password}
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-change-this-password}"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
+    image: redis:alpine
+    container_name: goticket_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
 
   catalogo:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MODULE: Catalogo-Evento
-        APP_JAR: Catalogo-Evento-0.0.1-SNAPSHOT.jar
+    build: ./Catalogo-Evento
+    container_name: goticket_catalogo
+    restart: unless-stopped
+    env_file: .env.backend
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: ${MYSQL_USER:-goticket}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      - SERVER_PORT=8081
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
     depends_on:
-      mysql:
-        condition: service_healthy
-    expose: ["8081"]
+      - rabbitmq
 
   inventario:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MODULE: Inventario
-        APP_JAR: Inventario-0.0.1-SNAPSHOT.jar
+    build: ./Inventario
+    container_name: goticket_inventario
+    restart: unless-stopped
+    env_file: .env.backend
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: ${MYSQL_USER:-goticket}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      REDIS_HOST: redis
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-this-password}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-goticket}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-this-password}
-      CATALOGO_URL: http://catalogo:8081
+      - SERVER_PORT=8082
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
+      # Variables detectadas en tu application.properties
+      - REDIS_HOST=redis 
+      - REDIS_PORT=6379
+      - CATALOGO_URL=http://catalogo:8081 
     depends_on:
-      mysql: { condition: service_healthy }
-      redis: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
-    expose: ["8082"]
+      - rabbitmq
+      - redis
+      - catalogo
 
   orden:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MODULE: Orden
-        APP_JAR: Orden-0.0.1-SNAPSHOT.jar
+    build: ./Orden
+    container_name: goticket_orden
+    restart: unless-stopped
+    env_file: .env.backend
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: ${MYSQL_USER:-goticket}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-goticket}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-this-password}
+      - SERVER_PORT=8083
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
     depends_on:
-      mysql: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
-    expose: ["8083"]
+      - rabbitmq
 
   pagos:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MODULE: Pagos
-        APP_JAR: Pagos-0.0.1-SNAPSHOT.jar
+    build: ./Pagos
+    container_name: goticket_pagos
+    restart: unless-stopped
+    env_file: .env.backend
     environment:
-      MYSQL_HOST: mysql
-      MYSQL_USER: ${MYSQL_USER:-goticket}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-goticket}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-this-password}
+      - SERVER_PORT=8084
+      - MYSQL_HOST=${DB_HOST}
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASS}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USERNAME=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASS}
     depends_on:
-      mysql: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
-    expose: ["8084"]
-
-  gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        MODULE: APIManager
-        APP_JAR: APIManager-1.0.0.jar
-    environment:
-      CATALOGO_URL: http://catalogo:8081
-      INVENTARIO_URL: http://inventario:8082
-      ORDEN_URL: http://orden:8083
-      PAGOS_URL: http://pagos:8084
-      GOTICKET_JWT_SECRET: ${GOTICKET_JWT_SECRET:?Set GOTICKET_JWT_SECRET in .env}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET in .env}
-      FRONTEND_OAUTH_SUCCESS_URL: http://localhost:5173/#oauth2
-    ports:
-      - "8080:8080"
-    depends_on:
-      catalogo: { condition: service_started }
-      inventario: { condition: service_started }
-      orden: { condition: service_started }
-      pagos: { condition: service_started }
-
-  frontend:
-    build:
-      context: ./Front-GoTicket
-      args:
-        VITE_API_MANAGER_URL: http://localhost:8080
-    ports:
-      - "5173:80"
-    depends_on:
-      gateway: { condition: service_started }
-
-volumes:
-  mysql_data:
-  rabbitmq_data:
-  redis_data:
+      - rabbitmq

@@ -1,2 +1,4 @@
+# Agregar al final de tu .gitignore
 .env
-node_modules
+.env.*
+!.env.*.example
