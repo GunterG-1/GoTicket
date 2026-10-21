@@ -59,14 +59,14 @@ public class ProxyService {
             );
 
             statusCode = response.getStatusCode().value();
-            responseHeaders.putAll(response.getHeaders());
+            copyResponseHeaders(responseHeaders, response.getHeaders());
             responseBody = response.getBody() != null ? response.getBody() : new byte[0];
 
             return new ResponseEntity<>(responseBody, responseHeaders, response.getStatusCode());
 
         } catch (HttpStatusCodeException ex) {
             statusCode = ex.getStatusCode().value();
-            responseHeaders.putAll(ex.getResponseHeaders() != null ? ex.getResponseHeaders() : new HttpHeaders());
+            copyResponseHeaders(responseHeaders, ex.getResponseHeaders());
             responseBody = ex.getResponseBodyAsByteArray();
             return new ResponseEntity<>(responseBody, responseHeaders, ex.getStatusCode());
         } catch (Exception ex) {
@@ -104,6 +104,29 @@ public class ProxyService {
             }
         }
         return headers;
+    }
+
+    private void copyResponseHeaders(HttpHeaders target, HttpHeaders source) {
+        if (source == null) {
+            return;
+        }
+
+        source.forEach((headerName, values) -> {
+            if (!isHopByHopHeader(headerName)) {
+                target.put(headerName, values);
+            }
+        });
+    }
+
+    private boolean isHopByHopHeader(String headerName) {
+        return "connection".equalsIgnoreCase(headerName)
+                || "keep-alive".equalsIgnoreCase(headerName)
+                || "proxy-authenticate".equalsIgnoreCase(headerName)
+                || "proxy-authorization".equalsIgnoreCase(headerName)
+                || "te".equalsIgnoreCase(headerName)
+                || "trailer".equalsIgnoreCase(headerName)
+                || "transfer-encoding".equalsIgnoreCase(headerName)
+                || "upgrade".equalsIgnoreCase(headerName);
     }
 
     private byte[] extractBody(HttpServletRequest request) throws IOException {
