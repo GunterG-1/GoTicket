@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,6 +20,8 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 @Component
 @RequiredArgsConstructor
 public class SqsMessagePoller {
+    private static final Logger log = LoggerFactory.getLogger(SqsMessagePoller.class);
+
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private final PaymentStatusListener listener;
@@ -44,8 +48,8 @@ public class SqsMessagePoller {
                 else listener.failed(event);
                 sqsClient.deleteMessage(DeleteMessageRequest.builder().queueUrl(queueUrl)
                         .receiptHandle(message.receiptHandle()).build());
-            } catch (Exception ignored) {
-                // The message remains visible for SQS redelivery.
+            } catch (Exception exception) {
+                log.warn("No se pudo procesar el mensaje de SQS de Orden; se reintentará", exception);
             }
         }
     }

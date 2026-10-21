@@ -40,7 +40,7 @@ public class OutboxPublisher {
                     .message(objectMapper.writeValueAsString(payload))
                     .messageAttributes(java.util.Map.of(
                             "eventType", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
-                                    .dataType("String").stringValue("ORDEN_CREADA").build()))
+                                    .dataType("String").stringValue("orden.creada").build()))
                     .build());
             event.setPublished(true);
             event.setPublishedAt(LocalDateTime.now());
