@@ -36,6 +36,7 @@ export default function ReservationModal({ event, user, onClose, onCreated }) {
   const matchTeams = isMatch ? getMatchTeams(event.nombre) : null;
   const [selectedSector, setSelectedSector] = useState((hasArenaSectors || isMatch) ? sectors[1] : null);
   const [availability, setAvailability] = useState(null);
+  const [sectorAvailability, setSectorAvailability] = useState([]);
   const [state, setState] = useState({ loading: false, loadingAvailability: true, error: '', success: false });
   const userId = user?.idUsuario || user?.id || user?.id_usuario;
   const unitPrice = Number(event.precio || 0) * (selectedSector?.multiplier || 1);
@@ -45,14 +46,20 @@ export default function ReservationModal({ event, user, onClose, onCreated }) {
   }) : 'Fecha por confirmar';
 
   useEffect(() => {
-    api.inventoryByEvent(event.idEvento)
-      .then((inventory) => setAvailability(Number(inventory?.cantidadDisponible ?? 0)))
+    Promise.all([api.inventoryByEvent(event.idEvento), api.inventorySectors(event.idEvento)])
+      .then(([inventory, availableSectors]) => {
+        setAvailability(Number(inventory?.cantidadDisponible ?? 0));
+        setSectorAvailability(availableSectors || []);
+      })
       .catch((error) => setState((current) => ({ ...current, error: `No se pudo consultar la disponibilidad: ${error.message}` })))
       .finally(() => setState((current) => ({ ...current, loadingAvailability: false })));
   }, [event.idEvento]);
 
-  const totalSectorCapacity = sectors.reduce((sum, sector) => sum + sector.capacity, 0);
-  const availableForSector = (sector) => availability === null ? 0 : Math.min(sector.capacity, Math.floor(availability * sector.capacity / totalSectorCapacity));
+  const availableForSector = (sector) => {
+    if (availability === null) return 0;
+    if (!sector) return availability;
+    return Number(sectorAvailability.find((item) => item.sector === sector.name)?.cantidadDisponible ?? 0);
+  };
   const availabilityLabel = (sector) => {
     const available = availableForSector(sector);
     if (state.loadingAvailability) return 'Consultando disponibilidad...';

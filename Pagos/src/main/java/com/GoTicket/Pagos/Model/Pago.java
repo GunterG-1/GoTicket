@@ -34,6 +34,9 @@ public class Pago {
     @Column(name = "id_usuario", nullable = false)
     private Long idUsuario;
 
+    @Column(name = "id_entrada_reventa")
+    private Long idEntradaReventa;
+
     @Column(name = "cantidad")
     private Integer cantidad;
 

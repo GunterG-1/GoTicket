@@ -25,6 +25,8 @@ import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
 import com.GoTicket.Inventario.Model.EstadoEntrada;
 import com.GoTicket.Inventario.Model.Inventario;
+import com.GoTicket.Inventario.Model.ConfirmarReservaRequest;
+import com.GoTicket.Inventario.Model.BloqueoInventario;
 import com.GoTicket.Inventario.Model.TransferenciaEntrada;
 import com.GoTicket.Inventario.Client.CatalogoEvento;
 import com.GoTicket.Inventario.Client.CatalogoEventoClient;
@@ -64,8 +66,8 @@ class InventarioServiceImplTest {
         inventory.setIdEvento(10L);
         inventory.setCantidadDisponible(0);
         inventory.setCantidadTotal(10);
-        when(catalogoEventoClient.buscarEvento(10L)).thenReturn(Optional.of(new CatalogoEvento(10L, 10, BigDecimal.TEN)));
-        when(inventarioRepository.findByIdEvento(10L)).thenReturn(Optional.of(inventory));
+        when(catalogoEventoClient.buscarEvento(10L)).thenReturn(Optional.of(new CatalogoEvento(10L, 10, BigDecimal.TEN, "Evento", "musica", "Otro lugar")));
+        when(inventarioRepository.findByIdEventoForUpdate(10L)).thenReturn(Optional.of(inventory));
 
         assertThrows(IllegalStateException.class, () -> service.reservarEntradas(new EntradaReservaRequest(10L, 7L, "General", 1)));
     }
@@ -77,8 +79,9 @@ class InventarioServiceImplTest {
         inventory.setIdEvento(10L);
         inventory.setCantidadDisponible(10);
         inventory.setCantidadTotal(10);
-        when(catalogoEventoClient.buscarEvento(10L)).thenReturn(Optional.of(new CatalogoEvento(10L, 10, BigDecimal.TEN)));
-        when(inventarioRepository.findByIdEvento(10L)).thenReturn(Optional.of(inventory));
+        when(catalogoEventoClient.buscarEvento(10L)).thenReturn(Optional.of(new CatalogoEvento(10L, 10, BigDecimal.TEN, "Evento", "musica", "Otro lugar")));
+        when(inventarioRepository.findByIdEventoForUpdate(10L)).thenReturn(Optional.of(inventory));
+        when(entradaRepository.findByIdEvento(10L)).thenReturn(List.of());
         when(entradaRepository.findByIdEventoAndSectorAndEstado(10L, "General", EstadoEntrada.DISPONIBLE)).thenReturn(List.of(entry));
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(valueOperations.setIfAbsent(any(), any(), any())).thenReturn(true);
@@ -89,5 +92,46 @@ class InventarioServiceImplTest {
         assertEquals(EstadoEntrada.BLOQUEADO, result.get(0).getEstado());
         assertEquals(7L, result.get(0).getIdUsuario());
         verify(valueOperations).setIfAbsent(any(), any(), org.mockito.ArgumentMatchers.eq(java.time.Duration.ofMinutes(5)));
+    }
+
+    @Test
+    void calculaDisponibilidadDistribuidaPorSector() {
+        Inventario inventory = new Inventario();
+        inventory.setIdEvento(10L);
+        inventory.setCantidadDisponible(10);
+        inventory.setCantidadTotal(10);
+        when(inventarioRepository.findByIdEvento(10L)).thenReturn(Optional.of(inventory));
+        when(catalogoEventoClient.buscarEvento(10L)).thenReturn(Optional.of(
+                new CatalogoEvento(10L, 10, BigDecimal.TEN, "Concierto", "musica", "Santander Arena")));
+        when(entradaRepository.findByIdEvento(10L)).thenReturn(List.of());
+
+        List<com.GoTicket.Inventario.Model.SectorDisponibilidad> result = service.disponibilidadPorSector(10L);
+
+        assertEquals(10, result.stream().mapToInt(com.GoTicket.Inventario.Model.SectorDisponibilidad::cantidadTotal).sum());
+        assertEquals(10, result.stream().mapToInt(com.GoTicket.Inventario.Model.SectorDisponibilidad::cantidadDisponible).sum());
+        assertEquals("Tribuna", result.get(0).sector());
+    }
+
+    @Test
+    void confirmarReservaDescuentaDisponibilidadUnaSolaVez() {
+        Entrada entry = new Entrada(1L, 10L, "General", "1", BigDecimal.TEN,
+                EstadoEntrada.BLOQUEADO, 7L, null, null, null);
+        Inventario inventory = new Inventario();
+        inventory.setIdEvento(10L);
+        inventory.setCantidadDisponible(10);
+        inventory.setCantidadTotal(10);
+        when(entradaRepository.findByIdEventoAndIdUsuarioAndEstado(10L, 7L, EstadoEntrada.BLOQUEADO))
+                .thenReturn(List.of(entry));
+        when(entradaRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(inventarioRepository.findByIdEventoForUpdate(10L)).thenReturn(Optional.of(inventory));
+        when(bloqueoRepository.findByIdOrden(99L)).thenReturn(Optional.empty());
+        when(bloqueoRepository.save(any(BloqueoInventario.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.confirmarReserva(new ConfirmarReservaRequest(10L, 7L, 99L));
+
+        assertEquals(9, inventory.getCantidadDisponible());
+        assertEquals(99L, entry.getIdOrden());
+        verify(inventarioRepository).save(inventory);
+        verify(bloqueoRepository).save(any(BloqueoInventario.class));
     }
 }

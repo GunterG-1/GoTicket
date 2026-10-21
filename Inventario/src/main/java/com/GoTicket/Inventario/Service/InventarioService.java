@@ -7,6 +7,7 @@ import com.GoTicket.Inventario.Model.Inventario;
 import com.GoTicket.Inventario.Model.ConfirmarReservaRequest;
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
+import com.GoTicket.Inventario.Model.SectorDisponibilidad;
 import com.GoTicket.Inventario.Model.PublicarReventaRequest;
 import com.GoTicket.Inventario.Model.TransferirEntradaRequest;
 
@@ -17,6 +18,8 @@ public interface InventarioService {
     Optional<Inventario> buscarInventarioPorId(Long id);
 
     Optional<Inventario> buscarInventarioPorEvento(Long idEvento);
+
+    List<SectorDisponibilidad> disponibilidadPorSector(Long idEvento);
 
     Inventario guardarInventario(Inventario inventario);
 
@@ -39,6 +42,8 @@ public interface InventarioService {
     void confirmarReserva(ConfirmarReservaRequest request);
 
     Entrada publicarReventa(Long idEntrada, PublicarReventaRequest request);
+
+    Entrada reservarReventa(Long idEntrada, TransferirEntradaRequest request);
 
     Entrada transferirEntrada(Long idEntrada, TransferirEntradaRequest request);
 }

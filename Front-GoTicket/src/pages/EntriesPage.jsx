@@ -6,7 +6,7 @@ export default function EntriesPage() {
   const [entries, setEntries] = useState([]);
   const [resaleEntries, setResaleEntries] = useState([]);
   const [prices, setPrices] = useState({});
-  const [state, setState] = useState({ loading: true, error: '', success: '' });
+  const [state, setState] = useState({ loading: true, buyingEntryId: null, error: '', success: '' });
 
   function loadEntries() {
     if (!userId) return;
@@ -29,5 +29,23 @@ export default function EntriesPage() {
     } catch (error) { setState((current) => ({ ...current, error: error.message })); }
   }
 
-  return <section className="page-section entries-page"><p className="eyebrow">ENTRADAS</p><h2>Mis entradas y reventa.</h2>{state.error && <p className="error-message">{state.error}</p>}{state.success && <p className="success-message">{state.success}</p>}{state.loading ? <p className="muted">Cargando entradas...</p> : <><div className="table-wrap"><table><thead><tr><th>Entrada</th><th>Evento</th><th>Sector</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.idEntrada}><td>#{entry.idEntrada} / {entry.numeroAsiento}</td><td>#{entry.idEvento}</td><td>{entry.sector}</td><td><span className="pill">{entry.estado}</span></td><td>{entry.estado === 'VENDIDO' && <span className="resale-action"><input type="number" min="1" step="0.01" placeholder="Precio" value={prices[entry.idEntrada] || ''} onChange={(event) => setPrices((current) => ({ ...current, [entry.idEntrada]: event.target.value }))} /><button className="secondary-button" onClick={() => publish(entry)}>Publicar</button></span>}</td></tr>)}</tbody></table>{entries.length === 0 && <p className="empty-state">No tienes entradas todavía.</p>}</div><div className="resale-market"><p className="eyebrow">MARKETPLACE</p><h3>Entradas publicadas para reventa</h3><div className="event-grid">{resaleEntries.map((entry) => <article className="event-card" key={entry.idEntrada}><span className="event-tag">REVENTA / {entry.sector}</span><h3>Entrada #{entry.idEntrada}</h3><p>Evento #{entry.idEvento} · Asiento {entry.numeroAsiento}</p><div className="event-meta"><span>Disponible</span><strong>${Number(entry.precio || 0).toLocaleString('es-CL')}</strong></div></article>)}</div>{resaleEntries.length === 0 && <p className="empty-state">No hay entradas en reventa.</p>}</div></>}</section>;
+  async function buy(entry) {
+    setState((current) => ({ ...current, buyingEntryId: entry.idEntrada, error: '', success: '' }));
+    try {
+      const order = await api.createOrder({
+        idEvento: entry.idEvento,
+        idUsuario: userId,
+        cantidad: 1,
+        precioUnitario: Number(entry.precio),
+        sector: entry.sector,
+        idEntradaReventa: entry.idEntrada
+      });
+      await api.reserveResale(entry.idEntrada, { idUsuarioDestino: userId, idOrden: order.idOrden });
+      window.location.hash = `pagos?orden=${order.idOrden}`;
+    } catch (error) {
+      setState((current) => ({ ...current, buyingEntryId: null, error: error.message }));
+    }
+  }
+
+  return <section className="page-section entries-page"><p className="eyebrow">ENTRADAS</p><h2>Mis entradas y reventa.</h2>{state.error && <p className="error-message">{state.error}</p>}{state.success && <p className="success-message">{state.success}</p>}{state.loading ? <p className="muted">Cargando entradas...</p> : <><div className="table-wrap"><table><thead><tr><th>Entrada</th><th>Evento</th><th>Sector</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.idEntrada}><td>#{entry.idEntrada} / {entry.numeroAsiento}</td><td>#{entry.idEvento}</td><td>{entry.sector}</td><td><span className="pill">{entry.estado}</span></td><td>{entry.estado === 'VENDIDO' && <span className="resale-action"><input type="number" min="1" step="0.01" placeholder="Precio" value={prices[entry.idEntrada] || ''} onChange={(event) => setPrices((current) => ({ ...current, [entry.idEntrada]: event.target.value }))} /><button className="secondary-button" onClick={() => publish(entry)}>Publicar</button></span>}</td></tr>)}</tbody></table>{entries.length === 0 && <p className="empty-state">No tienes entradas todavía.</p>}</div><div className="resale-market"><p className="eyebrow">MARKETPLACE</p><h3>Entradas publicadas para reventa</h3><div className="event-grid">{resaleEntries.map((entry) => { const isOwner = String(entry.idUsuario) === String(userId); return <article className="event-card" key={entry.idEntrada}><span className="event-tag">REVENTA / {entry.sector}</span><h3>Entrada #{entry.idEntrada}</h3><p>Evento #{entry.idEvento} · Asiento {entry.numeroAsiento}</p><div className="event-meta"><span>Disponible</span><strong>${Number(entry.precio || 0).toLocaleString('es-CL')}</strong></div>{isOwner ? <p className="muted">Esta entrada te pertenece.</p> : <button className="primary-button" disabled={state.buyingEntryId !== null} onClick={() => buy(entry)}>{state.buyingEntryId === entry.idEntrada ? 'Creando orden...' : 'Comprar entrada'}</button>}</article>; })}</div>{resaleEntries.length === 0 && <p className="empty-state">No hay entradas en reventa.</p>}</div></>}</section>;
 }

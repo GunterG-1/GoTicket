@@ -112,7 +112,7 @@ public class PagoServiceImpl implements PagoService {
         private void publicarResultado(Pago pago) {
         String key = "APROBADO".equals(pago.getEstado()) ? approvedKey : failedKey;
         PaymentStatusEvent event = new PaymentStatusEvent(pago.getIdPago(), pago.getIdOrden(), pago.getIdEvento(),
-                pago.getIdUsuario(), pago.getCantidad(), pago.getMonto(), pago.getEstado());
+                pago.getIdUsuario(), pago.getCantidad(), pago.getMonto(), pago.getEstado(), pago.getIdEntradaReventa());
         try {
             snsClient.publish(PublishRequest.builder()
                     .topicArn(topicArn)

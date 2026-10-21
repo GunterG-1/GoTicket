@@ -40,6 +40,9 @@ public class Orden {
     @Column(name = "sector", length = 80)
     private String sector;
 
+    @Column(name = "id_entrada_reventa")
+    private Long idEntradaReventa;
+
     @Column(name = "total", precision = 10, scale = 2, nullable = false)
     private BigDecimal total;
 

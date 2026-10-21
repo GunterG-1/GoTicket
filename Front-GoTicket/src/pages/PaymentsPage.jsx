@@ -9,13 +9,39 @@ export default function PaymentsPage() {
   const [form, setForm] = useState(initialForm);
   const [state, setState] = useState({ loading: true, processing: false, error: '', success: '' });
   const userId = getSession().user?.idUsuario;
+  const requestedOrderId = new URLSearchParams(window.location.hash.split('?')[1] || '').get('orden');
 
-  function loadPayments() {
-    setState((current) => ({ ...current, loading: true }));
-    api.payments(userId).then(setPayments).catch((requestError) => setState((current) => ({ ...current, error: requestError.message }))).finally(() => setState((current) => ({ ...current, loading: false })));
-  }
-
-  useEffect(() => { loadPayments(); }, []);
+  useEffect(() => {
+    let active = true;
+    async function loadPayments() {
+      setState((current) => ({ ...current, loading: true, error: '' }));
+      try {
+        for (let attempt = 0; attempt < (requestedOrderId ? 12 : 1); attempt += 1) {
+          const loadedPayments = await api.payments(userId);
+          if (!active) return;
+          setPayments(loadedPayments || []);
+          const payment = loadedPayments?.find((item) => String(item.idOrden) === requestedOrderId);
+          if (payment) {
+            if (payment.estado === 'PENDIENTE') setSelectedPayment(payment);
+            else setState((current) => ({ ...current, success: `El pago de la orden #${requestedOrderId} está ${payment.estado}.` }));
+            return;
+          }
+          if (!requestedOrderId) return;
+          if (attempt === 11) {
+            setState((current) => ({ ...current, success: 'La orden se creó; el pago todavía está siendo registrado. Actualiza esta página en unos segundos.' }));
+            return;
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        }
+      } catch (requestError) {
+        if (active) setState((current) => ({ ...current, error: requestError.message }));
+      } finally {
+        if (active) setState((current) => ({ ...current, loading: false }));
+      }
+    }
+    loadPayments();
+    return () => { active = false; };
+  }, [userId, requestedOrderId]);
 
   function updateForm(event) {
     const { name, value } = event.target;

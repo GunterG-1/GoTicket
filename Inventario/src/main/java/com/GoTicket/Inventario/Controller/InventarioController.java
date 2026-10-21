@@ -19,6 +19,7 @@ import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
 import com.GoTicket.Inventario.Model.PublicarReventaRequest;
 import com.GoTicket.Inventario.Model.TransferirEntradaRequest;
+import com.GoTicket.Inventario.Model.SectorDisponibilidad;
 import com.GoTicket.Inventario.Service.InventarioService;
 
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,11 @@ public class InventarioController {
         return inventarioService.buscarInventarioPorEvento(idEvento)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/evento/{idEvento}/sectores")
+    public ResponseEntity<List<SectorDisponibilidad>> disponibilidadPorSector(@PathVariable Long idEvento) {
+        return ResponseEntity.ok(inventarioService.disponibilidadPorSector(idEvento));
     }
 
     @PostMapping
@@ -140,6 +146,15 @@ public class InventarioController {
             return ResponseEntity.ok(inventarioService.publicarReventa(idEntrada, request));
         } catch (IllegalArgumentException | IllegalStateException exception) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/entradas/{idEntrada}/reventa/reservar")
+    public ResponseEntity<?> reservarReventa(@PathVariable Long idEntrada, @RequestBody TransferirEntradaRequest request) {
+        try {
+            return ResponseEntity.ok(inventarioService.reservarReventa(idEntrada, request));
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of("error", exception.getMessage()));
         }
     }
 

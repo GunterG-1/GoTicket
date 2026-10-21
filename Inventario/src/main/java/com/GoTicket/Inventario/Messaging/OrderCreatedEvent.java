@@ -2,5 +2,12 @@ package com.GoTicket.Inventario.Messaging;
 
 import java.math.BigDecimal;
 
-public record OrderCreatedEvent(Long idOrden, Long idEvento, Long idUsuario, Integer cantidad, BigDecimal total, String sector) {
+public record OrderCreatedEvent(
+        Long idOrden,
+        Long idEvento,
+        Long idUsuario,
+        Integer cantidad,
+        BigDecimal total,
+        String sector,
+        Long idEntradaReventa) {
 }

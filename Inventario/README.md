@@ -6,6 +6,7 @@ Servicio responsable de controlar la disponibilidad, reservas, entradas y revent
 
 - Administrar inventario por evento.
 - Reservar y confirmar entradas.
+- Consultar disponibilidad total y distribución por sector.
 - Procesar eventos de órdenes y pagos.
 - Coordinarse con Catálogo mediante HTTP.
 - Usar Redis para estados temporales de reserva.
@@ -75,3 +76,22 @@ docker compose --env-file .env.backend -f docker-compose.backend.yml up -d --bui
 GET /actuator/health
 ```
 
+## Disponibilidad y sectores
+
+La capacidad definida para el evento se distribuye entre los sectores configurados para partidos y eventos del Santander Arena. El resto de los eventos usa el sector `General`. La distribución es proporcional a los cupos base de cada sector; los cupos calculados suman exactamente la capacidad total del evento.
+
+```text
+GET /api/inventarios/evento/{idEvento}/sectores
+```
+
+La reserva valida el sector en el backend. Al confirmar la orden se descuenta la disponibilidad total una sola vez; un pago fallido libera la reserva y devuelve la cantidad.
+
+```text
+POST /api/inventarios/entradas/{idEntrada}/reventa/reservar
+```
+
+Este endpoint asocia una orden pendiente con la publicación para evitar que dos compradores reclamen la misma entrada. La transferencia definitiva se realiza al procesar el pago aprobado.
+
+## Reventa
+
+Una entrada vendida puede publicarse para reventa. La compra crea una orden y un pago pendiente; la titularidad cambia al comprador solo cuando se procesa el evento de pago aprobado. Si el pago falla, la entrada vuelve a estar disponible en el marketplace.

@@ -46,6 +46,9 @@ public class OrdenServiceImpl implements OrdenService {
         if (orden.getCantidad() == null || orden.getCantidad() <= 0) {
             throw new RuntimeException("La cantidad debe ser mayor a cero");
         }
+        if (orden.getIdEntradaReventa() != null && orden.getCantidad() != 1) {
+            throw new IllegalArgumentException("Una entrada publicada para reventa se vende individualmente");
+        }
 
         if (orden.getPrecioUnitario() == null || orden.getPrecioUnitario().doubleValue() <= 0) {
             throw new RuntimeException("El precio unitario debe ser mayor a cero");
@@ -60,7 +63,7 @@ public class OrdenServiceImpl implements OrdenService {
         Orden savedOrder = ordenRepository.save(orden);
         try {
             OrderCreatedEvent event = new OrderCreatedEvent(savedOrder.getIdOrden(), savedOrder.getIdEvento(), savedOrder.getIdUsuario(),
-                savedOrder.getCantidad(), savedOrder.getTotal(), savedOrder.getSector());
+                savedOrder.getCantidad(), savedOrder.getTotal(), savedOrder.getSector(), savedOrder.getIdEntradaReventa());
             outboxRepository.save(new OutboxEvent(null, "ORDEN_CREADA", objectMapper.writeValueAsString(event),
                 false, 0, LocalDateTime.now(), null));
         } catch (Exception exception) {

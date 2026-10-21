@@ -21,6 +21,7 @@ public interface EntradaRepository extends JpaRepository<Entrada, Long> {
     List<Entrada> findByIdUsuarioAndEstado(Long idUsuario, EstadoEntrada estado);
     List<Entrada> findByIdUsuario(Long idUsuario);
     List<Entrada> findByEstado(EstadoEntrada estado);
+    List<Entrada> findByEstadoAndIdOrdenIsNull(EstadoEntrada estado);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Entrada e where e.idEntrada = :id")
