@@ -7,7 +7,6 @@ import com.GoTicket.Inventario.Repository.BloqueoInventarioRepository;
 import com.GoTicket.Inventario.Repository.EntradaRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ public class OrderCreatedListener {
     private final BloqueoInventarioRepository bloqueoRepository;
     private final EntradaRepository entradaRepository;
 
-    @RabbitListener(queues = "${goticket.rabbit.order-queue}")
     @Transactional
     public void handle(OrderCreatedEvent event) {
         if (entradaRepository.findByIdOrden(event.idOrden()).isEmpty() == false) return;

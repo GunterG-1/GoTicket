@@ -6,7 +6,6 @@ import com.GoTicket.Inventario.Repository.EntradaRepository;
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EstadoEntrada;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,7 +18,6 @@ public class PaymentStatusListener {
     private final EntradaRepository entradaRepository;
     private final StringRedisTemplate redisTemplate;
 
-    @RabbitListener(queues = "${goticket.rabbit.payment-approved-queue}")
     @Transactional
     public void approved(PaymentStatusEvent event) {
         entradaRepository.findByIdOrden(event.idOrden()).forEach(entry -> {
@@ -35,7 +33,6 @@ public class PaymentStatusListener {
         });
     }
 
-    @RabbitListener(queues = "${goticket.rabbit.payment-failed-queue}")
     @Transactional
     public void failed(PaymentStatusEvent event) {
         if (event.idEvento() == null || event.cantidad() == null || event.cantidad() <= 0) return;

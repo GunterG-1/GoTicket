@@ -1,5 +1,5 @@
 FROM node:20-alpine AS build
-ARG VITE_API_MANAGER_URL=http://localhost:8080
+ARG VITE_API_MANAGER_URL=
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

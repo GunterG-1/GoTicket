@@ -4,7 +4,6 @@ import com.GoTicket.Pagos.Model.Pago;
 import com.GoTicket.Pagos.Repository.PagoRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentExpirationListener {
     private final PagoRepository pagoRepository;
 
-    @RabbitListener(queues = "${goticket.rabbit.payment-failed-queue}")
     @Transactional
     public void handle(PaymentStatusEvent event) {
         if (event.idOrden() == null) return;

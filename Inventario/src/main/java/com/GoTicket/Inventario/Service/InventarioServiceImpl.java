@@ -26,12 +26,14 @@ import com.GoTicket.Inventario.Client.CatalogoEventoClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import com.GoTicket.Inventario.Repository.BloqueoInventarioRepository;
 import com.GoTicket.Inventario.Messaging.PaymentStatusEvent;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -43,14 +45,16 @@ public class InventarioServiceImpl implements InventarioService {
     private final TransferenciaEntradaRepository transferenciaRepository;
     private final CatalogoEventoClient catalogoEventoClient;
     private final BloqueoInventarioRepository bloqueoRepository;
-    private final RabbitTemplate rabbitTemplate;
+    private final SnsClient snsClient;
+    private final ObjectMapper objectMapper;
+    @Value("${goticket.aws.sns.topic-arn}")
+    private String topicArn;
+    @Value("${goticket.aws.event.failed:pago.fallido}")
+    private String paymentFailedKey;
 
     @Value("${goticket.reservation.minutes:5}")
     private long reservationMinutes = 5;
-    @Value("${goticket.rabbit.exchange}")
-    private String exchangeName;
-    @Value("${goticket.rabbit.payment-failed-key}")
-    private String paymentFailedKey;
+
 
     @Override
     public List<Inventario> listarInventarios() {
@@ -87,13 +91,36 @@ public class InventarioServiceImpl implements InventarioService {
         Inventario inventarioExistente = inventarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Inventario no encontrado con id: " + id));
 
-        inventarioExistente.setIdEvento(inventario.getIdEvento());
-        inventarioExistente.setCantidadDisponible(inventario.getCantidadDisponible());
-        inventarioExistente.setCantidadTotal(inventario.getCantidadTotal());
+        int nuevaCantidadTotal = inventario.getCantidadTotal() == null ? 0 : inventario.getCantidadTotal();
+        if (nuevaCantidadTotal <= 0) {
+            throw new IllegalArgumentException("La capacidad debe ser mayor que cero");
+        }
+        int cantidadTotalAnterior = inventarioExistente.getCantidadTotal() == null
+                ? 0 : inventarioExistente.getCantidadTotal();
+        int cantidadDisponibleAnterior = inventarioExistente.getCantidadDisponible() == null
+                ? 0 : inventarioExistente.getCantidadDisponible();
+        long entradasComprometidas = entradaRepository.findByIdEvento(inventarioExistente.getIdEvento()).stream()
+                .filter(entrada -> entrada.getEstado() != EstadoEntrada.DISPONIBLE)
+                .count();
+        if (nuevaCantidadTotal < entradasComprometidas) {
+            throw new IllegalArgumentException(
+                    "La capacidad no puede ser menor que las entradas comprometidas (" + entradasComprometidas + ")");
+        }
+        int diferencia = nuevaCantidadTotal - cantidadTotalAnterior;
+        inventarioExistente.setCantidadDisponible(Math.max(0, cantidadDisponibleAnterior + diferencia));
+        inventarioExistente.setCantidadTotal(nuevaCantidadTotal);
         inventarioExistente.setActivo(inventario.getActivo());
         inventarioExistente.setFechaActualizacion(LocalDateTime.now());
 
         return inventarioRepository.save(inventarioExistente);
+    }
+
+    @Override
+    @Transactional
+    public Inventario actualizarInventarioPorEvento(Long idEvento, Inventario inventario) {
+        Inventario existente = inventarioRepository.findByIdEvento(idEvento)
+                .orElseThrow(() -> new RuntimeException("Inventario no encontrado para el evento: " + idEvento));
+        return actualizarInventario(existente.getIdInventario(), inventario);
     }
 
     @Override
@@ -103,6 +130,20 @@ public class InventarioServiceImpl implements InventarioService {
             throw new RuntimeException("Inventario no encontrado con id: " + id);
         }
         inventarioRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void eliminarInventarioPorEvento(Long idEvento) {
+        Inventario inventario = inventarioRepository.findByIdEvento(idEvento)
+                .orElseThrow(() -> new RuntimeException("Inventario no encontrado para el evento: " + idEvento));
+        boolean tieneEntradasComprometidas = entradaRepository.findByIdEvento(idEvento).stream()
+                .anyMatch(entrada -> entrada.getEstado() != EstadoEntrada.DISPONIBLE);
+        if (tieneEntradasComprometidas) {
+            throw new IllegalStateException("No se puede eliminar el evento porque tiene entradas comprometidas");
+        }
+        entradaRepository.deleteAll(entradaRepository.findByIdEvento(idEvento));
+        inventarioRepository.delete(inventario);
     }
 
     @Override
@@ -127,7 +168,7 @@ public class InventarioServiceImpl implements InventarioService {
     @Transactional
     public List<Entrada> reservarEntradas(EntradaReservaRequest request) {
         if (request.idEvento() == null || request.idUsuario() == null || request.cantidad() == null || request.cantidad() <= 0) {
-            throw new IllegalArgumentException("Evento, usuario y cantidad válida son obligatorios");
+            throw new IllegalArgumentException("Evento, usuario y cantidad vÃ¡lida son obligatorios");
         }
         String sector = request.sector() == null || request.sector().isBlank() ? "General" : request.sector();
         asegurarEntradasFisicas(request.idEvento(), request.cantidad());
@@ -185,7 +226,7 @@ public class InventarioServiceImpl implements InventarioService {
         int capacity = inventory.getCantidadTotal() == null ? existingCount + missing : inventory.getCantidadTotal();
         int toCreate = Math.min(missing, Math.max(0, capacity - existingCount));
         if (toCreate < missing) {
-            throw new IllegalStateException("No hay entradas físicas suficientes para el evento solicitado");
+            throw new IllegalStateException("No hay entradas fÃ­sicas suficientes para el evento solicitado");
         }
 
         List<Entrada> newEntries = new ArrayList<>();
@@ -234,8 +275,14 @@ public class InventarioServiceImpl implements InventarioService {
         });
         expiredOrders.forEach((orderId, quantity) -> {
             Entrada entry = orderEntries.get(orderId);
-            rabbitTemplate.convertAndSend(exchangeName, paymentFailedKey,
-                    new PaymentStatusEvent(null, orderId, entry.getIdEvento(), entry.getIdUsuario(), quantity, null, "RECHAZADO"));
+            try {
+                PaymentStatusEvent event = new PaymentStatusEvent(null, orderId, entry.getIdEvento(),
+                        entry.getIdUsuario(), quantity, null, "RECHAZADO");
+                snsClient.publish(PublishRequest.builder().topicArn(topicArn)
+                        .message(objectMapper.writeValueAsString(event)).build());
+            } catch (Exception exception) {
+                throw new IllegalStateException("No se pudo publicar el evento de pago fallido", exception);
+            }
         });
     }
 
@@ -261,7 +308,7 @@ public class InventarioServiceImpl implements InventarioService {
         Entrada entry = entradaRepository.findByIdForUpdate(idEntrada)
                 .orElseThrow(() -> new IllegalArgumentException("Entrada no encontrada"));
         if (!EstadoEntrada.EN_REVENTA.equals(entry.getEstado())) {
-            throw new IllegalStateException("La entrada no está publicada para reventa");
+            throw new IllegalStateException("La entrada no estÃ¡ publicada para reventa");
         }
         Long previousOwner = entry.getIdUsuario();
         entry.setIdUsuario(request.idUsuarioDestino());

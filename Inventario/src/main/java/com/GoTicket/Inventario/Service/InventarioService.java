@@ -24,6 +24,10 @@ public interface InventarioService {
 
     void eliminarInventario(Long id);
 
+    Inventario actualizarInventarioPorEvento(Long idEvento, Inventario inventario);
+
+    void eliminarInventarioPorEvento(Long idEvento);
+
     List<Entrada> listarEntradas(Long idEvento);
 
     List<Entrada> listarEntradasDeUsuario(Long idUsuario);

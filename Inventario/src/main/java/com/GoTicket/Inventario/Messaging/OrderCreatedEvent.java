@@ -1,4 +1,6 @@
 package com.GoTicket.Inventario.Messaging;
 
-public record OrderCreatedEvent(Long idOrden, Long idEvento, Integer cantidad) {
+import java.math.BigDecimal;
+
+public record OrderCreatedEvent(Long idOrden, Long idEvento, Long idUsuario, Integer cantidad, BigDecimal total, String sector) {
 }

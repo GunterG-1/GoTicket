@@ -18,7 +18,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.services.sns.SnsClient;
 
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
@@ -41,14 +42,15 @@ class InventarioServiceImplTest {
     @Mock private ValueOperations<String, String> valueOperations;
     @Mock private CatalogoEventoClient catalogoEventoClient;
     @Mock private BloqueoInventarioRepository bloqueoRepository;
-    @Mock private RabbitTemplate rabbitTemplate;
+    @Mock private SnsClient snsClient;
+    @Mock private ObjectMapper objectMapper;
 
     private InventarioServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new InventarioServiceImpl(inventarioRepository, entradaRepository, redisTemplate, transferenciaRepository,
-            catalogoEventoClient, bloqueoRepository, rabbitTemplate);
+            catalogoEventoClient, bloqueoRepository, snsClient, objectMapper);
     }
 
     @Test

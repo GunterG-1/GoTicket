@@ -65,12 +65,37 @@ public class InventarioController {
         }
     }
 
+    @PutMapping("/evento/{idEvento}")
+    public ResponseEntity<?> actualizarInventarioPorEvento(@PathVariable Long idEvento,
+                                                            @RequestBody Inventario inventario) {
+        try {
+            return ResponseEntity.ok(inventarioService.actualizarInventarioPorEvento(idEvento, inventario));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", exception.getMessage()));
+        } catch (RuntimeException exception) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarInventario(@PathVariable Long id) {
         try {
             inventarioService.eliminarInventario(id);
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/evento/{idEvento}")
+    public ResponseEntity<?> eliminarInventarioPorEvento(@PathVariable Long idEvento) {
+        try {
+            inventarioService.eliminarInventarioPorEvento(idEvento);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", exception.getMessage()));
+        } catch (RuntimeException exception) {
             return ResponseEntity.notFound().build();
         }
     }

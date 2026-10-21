@@ -3,7 +3,6 @@ package com.GoTicket.Pagos.Messaging;
 import com.GoTicket.Pagos.Model.Pago;
 import com.GoTicket.Pagos.Repository.PagoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Component;
 public class OrderCreatedListener {
     private final PagoRepository pagoRepository;
 
-    @RabbitListener(queues = "${goticket.rabbit.order-queue}")
     public void handle(OrderCreatedEvent event) {
         if (pagoRepository.findByIdOrden(event.idOrden()).stream().findAny().isPresent()) {
             return;

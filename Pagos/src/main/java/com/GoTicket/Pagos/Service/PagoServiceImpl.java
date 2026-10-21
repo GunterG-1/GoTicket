@@ -7,27 +7,30 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 
 import com.GoTicket.Pagos.Model.Pago;
 import com.GoTicket.Pagos.Repository.PagoRepository;
 import com.GoTicket.Pagos.Messaging.PaymentStatusEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 @Service
 @RequiredArgsConstructor
 public class PagoServiceImpl implements PagoService {
 
     private final PagoRepository pagoRepository;
-    private final RabbitTemplate rabbitTemplate;
+    private final SnsClient snsClient;
+    private final ObjectMapper objectMapper;
 
-    @Value("${goticket.rabbit.exchange}")
-    private String exchangeName;
-    @Value("${goticket.rabbit.payment-approved-key}")
+    @Value("${goticket.aws.sns.topic-arn}")
+    private String topicArn;
+    @Value("${goticket.aws.event.approved}")
     private String approvedKey;
-    @Value("${goticket.rabbit.payment-failed-key}")
+    @Value("${goticket.aws.event.failed}")
     private String failedKey;
     @Value("${goticket.payment.expiration-minutes:5}")
     private long paymentExpirationMinutes;
@@ -65,7 +68,7 @@ public class PagoServiceImpl implements PagoService {
             throw new RuntimeException("El monto debe ser mayor a cero");
         }
         if (pago.getMetodoPago() == null || pago.getMetodoPago().isBlank()) {
-            throw new RuntimeException("El método de pago es obligatorio");
+            throw new RuntimeException("El metodo de pago es obligatorio");
         }
 
         pago.setEstado("PENDIENTE");
@@ -90,7 +93,7 @@ public class PagoServiceImpl implements PagoService {
             pago.setFechaActualizacion(LocalDateTime.now());
             Pago expirado = pagoRepository.save(pago);
             publicarResultado(expirado);
-            throw new RuntimeException("El tiempo para pagar expiró");
+            throw new RuntimeException("El tiempo para pagar expiro");
         }
         validarDatosTarjeta(numeroTarjeta, vencimiento, cvv, titular);
 
@@ -108,9 +111,19 @@ public class PagoServiceImpl implements PagoService {
 
         private void publicarResultado(Pago pago) {
         String key = "APROBADO".equals(pago.getEstado()) ? approvedKey : failedKey;
-        rabbitTemplate.convertAndSend(exchangeName, key,
-            new PaymentStatusEvent(pago.getIdPago(), pago.getIdOrden(), pago.getIdEvento(),
-                pago.getIdUsuario(), pago.getCantidad(), pago.getMonto(), pago.getEstado()));
+        PaymentStatusEvent event = new PaymentStatusEvent(pago.getIdPago(), pago.getIdOrden(), pago.getIdEvento(),
+                pago.getIdUsuario(), pago.getCantidad(), pago.getMonto(), pago.getEstado());
+        try {
+            snsClient.publish(PublishRequest.builder()
+                    .topicArn(topicArn)
+                    .message(objectMapper.writeValueAsString(event))
+                    .messageAttributes(java.util.Map.of(
+                            "eventType", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
+                                    .dataType("String").stringValue(key).build()))
+                    .build());
+        } catch (Exception exception) {
+            throw new IllegalStateException("No se pudo publicar el resultado del pago", exception);
+        }
         }
 
     private void validarDatosTarjeta(String numero, String vencimiento, String cvv, String titular) {
@@ -120,7 +133,7 @@ public class PagoServiceImpl implements PagoService {
         }
         String tarjeta = numero == null ? "" : numero.replaceAll("\\s+", "");
         if (!tarjeta.matches("\\d{13,19}") || !luhnValida(tarjeta)) {
-            throw new RuntimeException("El número de tarjeta no es válido");
+            throw new RuntimeException("El numero de tarjeta no es valido");
         }
     }
 

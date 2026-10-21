@@ -19,6 +19,7 @@
 
     <properties>
         <java.version>17</java.version>
+        <maven.compiler.release>17</maven.compiler.release>
         <springdoc.version>2.5.0</springdoc.version>
     </properties>
 

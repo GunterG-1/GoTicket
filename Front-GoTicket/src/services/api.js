@@ -1,4 +1,4 @@
-const API_MANAGER_URL = import.meta.env.VITE_API_MANAGER_URL || 'http://localhost:8080';
+const API_MANAGER_URL = import.meta.env.VITE_API_MANAGER_URL ?? '';
 const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || 'duoc-demo-key-2026';
 
 function deriveUserId(email) {
@@ -64,7 +64,7 @@ async function request(path, options = {}) {
       clearSession();
       window.dispatchEvent(new Event('goticket-auth-expired'));
     }
-    const message = typeof body === 'object' ? body.message || body.error || body.detail : body;
+    const message = body && typeof body === 'object' ? body.message || body.error || body.detail : body;
     throw new Error(response.status === 403 ? 'Tu sesión expiró. Vuelve a iniciar sesión.' : (message || `La solicitud falló (${response.status})`));
   }
   return body;
@@ -76,8 +76,11 @@ export const api = {
   inventory: () => request('/api/proxy/inventarios'),
   inventoryByEvent: (eventId) => request(`/api/proxy/inventarios/evento/${eventId}`),
   createEvent: (event) => request('/api/proxy/eventos', { method: 'POST', body: JSON.stringify(event) }),
+  updateEvent: (id, event) => request(`/api/proxy/eventos/${id}`, { method: 'PUT', body: JSON.stringify(event) }),
   deleteEvent: (id) => request(`/api/proxy/eventos/${id}`, { method: 'DELETE' }),
   createInventory: (inventory) => request('/api/proxy/inventarios', { method: 'POST', body: JSON.stringify(inventory) }),
+  updateInventoryByEvent: (eventId, inventory) => request(`/api/proxy/inventarios/evento/${eventId}`, { method: 'PUT', body: JSON.stringify(inventory) }),
+  deleteInventoryByEvent: (eventId) => request(`/api/proxy/inventarios/evento/${eventId}`, { method: 'DELETE' }),
   reserveEntries: (reservation) => request('/api/proxy/inventarios/reservas', { method: 'POST', body: JSON.stringify(reservation) }),
   confirmReservation: (reservation) => request('/api/proxy/inventarios/reservas/confirmar', { method: 'POST', body: JSON.stringify(reservation) }),
   userEntries: (userId) => request(`/api/proxy/inventarios/usuario/${userId}/entradas`),

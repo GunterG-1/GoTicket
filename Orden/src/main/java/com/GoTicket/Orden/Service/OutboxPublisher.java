@@ -2,7 +2,6 @@ package com.GoTicket.Orden.Service;
 
 import java.time.LocalDateTime;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -12,6 +11,8 @@ import com.GoTicket.Orden.Messaging.OrderCreatedEvent;
 import com.GoTicket.Orden.Model.OutboxEvent;
 import com.GoTicket.Orden.Repository.OutboxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,13 +20,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OutboxPublisher {
     private final OutboxEventRepository repository;
-    private final RabbitTemplate rabbitTemplate;
+    private final SnsClient snsClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${goticket.rabbit.exchange}")
-    private String exchangeName;
-    @Value("${goticket.rabbit.order-routing-key}")
-    private String routingKey;
+    @Value("${goticket.aws.sns.topic-arn}")
+    private String topicArn;
 
     @Scheduled(fixedDelayString = "${goticket.outbox.poll-ms:2000}")
     @Transactional
@@ -36,7 +35,13 @@ public class OutboxPublisher {
     private void publish(OutboxEvent event) {
         try {
             OrderCreatedEvent payload = objectMapper.readValue(event.getPayload(), OrderCreatedEvent.class);
-            rabbitTemplate.convertAndSend(exchangeName, routingKey, payload);
+            snsClient.publish(PublishRequest.builder()
+                    .topicArn(topicArn)
+                    .message(objectMapper.writeValueAsString(payload))
+                    .messageAttributes(java.util.Map.of(
+                            "eventType", software.amazon.awssdk.services.sns.model.MessageAttributeValue.builder()
+                                    .dataType("String").stringValue("ORDEN_CREADA").build()))
+                    .build());
             event.setPublished(true);
             event.setPublishedAt(LocalDateTime.now());
         } catch (Exception exception) {

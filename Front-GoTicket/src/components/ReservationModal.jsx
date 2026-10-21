@@ -10,27 +10,39 @@ const arenaSectors = [
 ];
 
 const matchSectors = [
-  { name: 'Rapa Nui', multiplier: 1, capacity: 1800, color: '#f6c344' },
-  { name: 'Oceano', multiplier: 0.72, capacity: 2400, color: '#f58220' },
-  { name: 'Cordillera', multiplier: 0.52, capacity: 3000, color: '#e92d55' },
-  { name: 'Caupolicán', multiplier: 0.38, capacity: 2600, color: '#9272b4' },
-  { name: 'Tucapel', multiplier: 0.38, capacity: 2600, color: '#a6379e' },
-  { name: 'Galvarino', multiplier: 0.38, capacity: 2200, color: '#4262a4' },
-  { name: 'Arica', multiplier: 0.38, capacity: 2200, color: '#9bd8d5' },
-  { name: 'Magallanes', multiplier: 0.38, capacity: 2200, color: '#54bba9' }
+  { name: 'Rapa Nui', side: 'LOCAL', multiplier: 1, capacity: 1800, color: '#f6c344' },
+  { name: 'Oceano', side: 'VISITANTE', multiplier: 0.72, capacity: 2400, color: '#f58220' },
+  { name: 'Cordillera', side: 'LOCAL', multiplier: 0.52, capacity: 3000, color: '#e92d55' },
+  { name: 'Caupolicán', side: 'VISITANTE', multiplier: 0.38, capacity: 2600, color: '#9272b4' },
+  { name: 'Tucapel', side: 'LOCAL', multiplier: 0.38, capacity: 2600, color: '#a6379e' },
+  { name: 'Galvarino', side: 'VISITANTE', multiplier: 0.38, capacity: 2200, color: '#4262a4' },
+  { name: 'Arica', side: 'LOCAL', multiplier: 0.38, capacity: 2200, color: '#9bd8d5' },
+  { name: 'Magallanes', side: 'VISITANTE', multiplier: 0.38, capacity: 2200, color: '#54bba9' }
 ];
+
+function getMatchTeams(eventName) {
+  const name = String(eventName || '').trim();
+  const match = name.match(/^(.+?)\s+(?:vs\.?|v\.?|contra)\s+(.+)$/i)
+    || name.match(/^(.+?)\s+-\s+(.+)$/i);
+  if (!match) return { local: name, visitante: 'Rival por confirmar' };
+  return { local: match[1].trim(), visitante: match[2].trim() };
+}
 
 export default function ReservationModal({ event, user, onClose, onCreated }) {
   const [quantity, setQuantity] = useState(1);
   const hasArenaSectors = event.lugar?.toLowerCase().includes('santander arena');
   const isMatch = /f[uú]tbol|partido|colo-colo|deportes concepci[oó]n/i.test(`${event.categoria || ''} ${event.nombre || ''}`);
   const sectors = isMatch ? matchSectors : arenaSectors;
+  const matchTeams = isMatch ? getMatchTeams(event.nombre) : null;
   const [selectedSector, setSelectedSector] = useState((hasArenaSectors || isMatch) ? sectors[1] : null);
   const [availability, setAvailability] = useState(null);
   const [state, setState] = useState({ loading: false, loadingAvailability: true, error: '', success: false });
   const userId = user?.idUsuario || user?.id || user?.id_usuario;
   const unitPrice = Number(event.precio || 0) * (selectedSector?.multiplier || 1);
   const total = unitPrice * quantity;
+  const formatEventDate = (value) => value ? new Date(value).toLocaleString('es-CL', {
+    weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+  }) : 'Fecha por confirmar';
 
   useEffect(() => {
     api.inventoryByEvent(event.idEvento)
@@ -41,6 +53,13 @@ export default function ReservationModal({ event, user, onClose, onCreated }) {
 
   const totalSectorCapacity = sectors.reduce((sum, sector) => sum + sector.capacity, 0);
   const availableForSector = (sector) => availability === null ? 0 : Math.min(sector.capacity, Math.floor(availability * sector.capacity / totalSectorCapacity));
+  const availabilityLabel = (sector) => {
+    const available = availableForSector(sector);
+    if (state.loadingAvailability) return 'Consultando disponibilidad...';
+    if (available === 0) return 'Agotado';
+    if (available <= Math.max(20, sector.capacity * 0.1)) return `Últimas ${available.toLocaleString('es-CL')} entradas`;
+    return `${available.toLocaleString('es-CL')} entradas disponibles`;
+  };
 
   async function handleSubmit(formEvent) {
     formEvent.preventDefault();
@@ -78,27 +97,55 @@ export default function ReservationModal({ event, user, onClose, onCreated }) {
       {!state.success ? <>
         <p className="eyebrow">RESERVA DE ENTRADAS</p>
         <h2 id="reservation-title">{event.nombre}</h2>
-        <p className="muted">{event.lugar || 'Evento GoTicket'}</p>
+        <div className="reservation-event-meta">
+          <span>{formatEventDate(event.fechaInicio)}</span>
+          <span>{event.lugar || 'Evento GoTicket'}</span>
+        </div>
+        {event.imagenUrl && <img className="reservation-event-image" src={event.imagenUrl} alt="" onError={(error) => { error.currentTarget.style.display = 'none'; }} />}
         <form className="reservation-form" onSubmit={handleSubmit}>
-          {isMatch && <div className="function-picker"><span>Selecciona función</span><strong>DOM. 13 SEPTIEMBRE · 17:30</strong><em>● Disponible</em></div>}
-          {(hasArenaSectors || isMatch) && <div className={`stadium-map ${isMatch ? 'match-map' : 'arena-map'}`} aria-hidden="true"><span className="stadium-field">{isMatch ? 'CANCHA' : 'ESCENARIO'}</span><i /><i /><i /><i /></div>}
+          {isMatch && <div className="function-picker">
+            <span>PARTIDO / SELECCIONA FUNCIÓN</span>
+            <div className="match-teams" aria-label={`Partido: local ${matchTeams.local}, visitante ${matchTeams.visitante}`}>
+              <div className="match-team match-team-home"><strong>{matchTeams.local}</strong><small>LOCAL</small></div>
+              <b className="match-vs">VS</b>
+              <div className="match-team match-team-away"><strong>{matchTeams.visitante}</strong><small>VISITANTE</small></div>
+            </div>
+            <strong>{formatEventDate(event.fechaInicio).toUpperCase()}</strong><em>● Disponible</em>
+          </div>}
+          {(hasArenaSectors || isMatch) && <div className={`stadium-map ${isMatch ? 'match-map' : 'arena-map'}`} aria-label="Mapa de sectores">
+            <span className="stadium-field">{isMatch ? 'CANCHA' : 'ESCENARIO'}</span>
+            {sectors.slice(0, 4).map((sector, index) => <button
+              key={sector.name}
+              type="button"
+              className={`map-sector map-sector-${index + 1} ${selectedSector?.name === sector.name ? 'is-selected' : ''}`}
+              style={{ '--sector-color': sector.color }}
+              aria-label={`Seleccionar ${sector.name}`}
+              onClick={() => setSelectedSector(sector)}
+            />)}
+          </div>}
           {(hasArenaSectors || isMatch) && <fieldset className="sector-picker">
             <legend>Selecciona tu sector</legend>
             {sectors.map((sector) => {
               const sectorPrice = Number(event.precio || 0) * sector.multiplier;
-              return <label className={`sector-option ${selectedSector?.name === sector.name ? 'is-selected' : ''}`} key={sector.name} style={{ '--sector-color': sector.color }}>
-                <input type="radio" name="sector" value={sector.name} checked={selectedSector?.name === sector.name} onChange={() => setSelectedSector(sector)} />
+              const available = availableForSector(sector);
+              const soldOut = !state.loadingAvailability && available === 0;
+              return <label className={`sector-option ${selectedSector?.name === sector.name ? 'is-selected' : ''} ${soldOut ? 'is-sold-out' : ''}`} key={sector.name} style={{ '--sector-color': sector.color }}>
+                <input type="radio" name="sector" value={sector.name} checked={selectedSector?.name === sector.name} disabled={soldOut} onChange={() => { setSelectedSector(sector); setQuantity(1); }} />
                 <span className="sector-name"><i aria-hidden="true" /><strong>{sector.name}</strong><small>{state.loadingAvailability ? 'Consultando disponibilidad...' : `${availableForSector(sector).toLocaleString('es-CL')} entradas disponibles`}</small></span>
-                <b>${sectorPrice.toLocaleString('es-CL')}</b>
+                <span className="sector-price"><b>${sectorPrice.toLocaleString('es-CL')}</b><small>{availabilityLabel(sector)}</small>{isMatch && <em className={`sector-side sector-side-${sector.side.toLowerCase()}`}>{sector.side}</em>}</span>
               </label>;
             })}
           </fieldset>}
-          <label htmlFor="quantity">Cantidad de entradas
-            <input id="quantity" type="number" min="1" max="10" value={quantity} onChange={(inputEvent) => setQuantity(Number(inputEvent.target.value))} required />
-          </label>
-          <div className="reservation-total"><span>{selectedSector?.name || 'Entrada'} · Total</span><strong>${total.toLocaleString('es-CL')}</strong></div>
           {state.error && <p className="error-message">{state.error}</p>}
-          <button className="primary-button" type="submit" disabled={state.loading || state.loadingAvailability || availability === 0}>{state.loading ? 'Creando reserva...' : state.loadingAvailability ? 'Consultando disponibilidad...' : 'Confirmar reserva'}</button>
+          <div className="reservation-summary">
+            <div className="quantity-control">
+              <span>Cantidad de entradas</span>
+              <div><button type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} disabled={quantity <= 1}>−</button><strong>{quantity}</strong><button type="button" onClick={() => setQuantity((current) => Math.min(10, current + 1))} disabled={quantity >= 10 || (selectedSector && availableForSector(selectedSector) <= quantity)}>+</button></div>
+              <small>Máximo 10 entradas por usuario</small>
+            </div>
+            <div className="reservation-total"><span>{selectedSector?.name || 'Entrada'} · Total</span><strong>${total.toLocaleString('es-CL')}</strong></div>
+            <button className="primary-button" type="submit" disabled={state.loading || state.loadingAvailability || availability === 0 || ((hasArenaSectors || isMatch) && !selectedSector)}>{state.loading ? 'Creando reserva...' : state.loadingAvailability ? 'Consultando disponibilidad...' : 'Continuar con la reserva →'}</button>
+          </div>
         </form>
       </> : <div className="reservation-success">
         <p className="eyebrow">RESERVA CONFIRMADA</p>

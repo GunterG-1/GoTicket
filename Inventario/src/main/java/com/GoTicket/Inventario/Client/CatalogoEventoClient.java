@@ -1,5 +1,6 @@
 package com.GoTicket.Inventario.Client;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,18 @@ public class CatalogoEventoClient {
             return Optional.ofNullable(evento);
         } catch (RuntimeException exception) {
             return Optional.empty();
+        }
+    }
+
+    public List<CatalogoEvento> listarEventos() {
+        try {
+            CatalogoEvento[] eventos = restClient.get()
+                    .uri(catalogoUrl + "/api/eventos")
+                    .retrieve()
+                    .body(CatalogoEvento[].class);
+            return eventos == null ? List.of() : List.of(eventos);
+        } catch (RuntimeException exception) {
+            return List.of();
         }
     }
 }

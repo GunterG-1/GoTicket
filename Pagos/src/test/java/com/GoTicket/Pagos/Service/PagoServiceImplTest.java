@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import software.amazon.awssdk.services.sns.SnsClient;
 
 import com.GoTicket.Pagos.Model.Pago;
 import com.GoTicket.Pagos.Repository.PagoRepository;
@@ -19,13 +20,14 @@ import com.GoTicket.Pagos.Repository.PagoRepository;
 @ExtendWith(MockitoExtension.class)
 class PagoServiceImplTest {
     @Mock private PagoRepository pagoRepository;
-    @Mock private RabbitTemplate rabbitTemplate;
+    @Mock private SnsClient snsClient;
+    @Mock private ObjectMapper objectMapper;
 
     private PagoServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new PagoServiceImpl(pagoRepository, rabbitTemplate);
+        service = new PagoServiceImpl(pagoRepository, snsClient, objectMapper);
     }
 
     @Test
@@ -52,6 +54,6 @@ class PagoServiceImplTest {
     @Test
     void noPermiteModificarPagoFinalizado() {
         assertThrows(RuntimeException.class, () -> service.actualizarPago(3L, new Pago()));
-        verifyNoInteractions(pagoRepository, rabbitTemplate);
+        verifyNoInteractions(pagoRepository, snsClient);
     }
 }

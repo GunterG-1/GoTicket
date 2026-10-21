@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,15 +22,8 @@ import lombok.RequiredArgsConstructor;
 public class OrdenServiceImpl implements OrdenService {
 
     private final OrdenRepository ordenRepository;
-    private final RabbitTemplate rabbitTemplate;
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
-
-    @Value("${goticket.rabbit.exchange}")
-    private String exchangeName;
-
-    @Value("${goticket.rabbit.order-routing-key}")
-    private String routingKey;
 
     @Override
     public List<Orden> listarOrdenes() {

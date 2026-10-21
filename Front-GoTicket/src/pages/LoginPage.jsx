@@ -1,6 +1,6 @@
 export default function LoginPage() {
   function startGoogleLogin() {
-    const apiManagerUrl = import.meta.env.VITE_API_MANAGER_URL || 'http://localhost:8080';
+    const apiManagerUrl = import.meta.env.VITE_API_MANAGER_URL ?? '';
     window.location.href = `${apiManagerUrl}/oauth2/authorization/google`;
   }
 

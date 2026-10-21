@@ -1,0 +1,82 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: goticket_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+  catalogo:
+    build:
+      context: ./Catalogo-Evento
+      dockerfile: dockerfile
+    container_name: goticket_catalogo
+    restart: unless-stopped
+    env_file:
+      - .env.backend
+    environment:
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - backend
+
+  inventario:
+    build:
+      context: ./Inventario
+      dockerfile: dockerfile
+    container_name: goticket_inventario
+    restart: unless-stopped
+    env_file:
+      - .env.backend
+    environment:
+      SERVER_PORT: 8082
+      CATALOGO_URL: http://catalogo:8081
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8082:8082"
+    depends_on:
+      - catalogo
+      - redis
+    networks:
+      - backend
+
+  orden:
+    build:
+      context: ./Orden
+      dockerfile: dockerfile
+    container_name: goticket_orden
+    restart: unless-stopped
+    env_file:
+      - .env.backend
+    environment:
+      SERVER_PORT: 8083
+    ports:
+      - "8083:8083"
+    networks:
+      - backend
+
+  pagos:
+    build:
+      context: ./Pagos
+      dockerfile: dockerfile
+    container_name: goticket_pagos
+    restart: unless-stopped
+    env_file:
+      - .env.backend
+    environment:
+      SERVER_PORT: 8084
+    ports:
+      - "8084:8084"
+    networks:
+      - backend
+
+volumes:
+  redis_data:
+
+networks:
+  backend:

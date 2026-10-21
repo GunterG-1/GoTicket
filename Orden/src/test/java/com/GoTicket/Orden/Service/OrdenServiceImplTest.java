@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.GoTicket.Orden.Model.Orden;
@@ -20,7 +19,6 @@ import com.GoTicket.Orden.Repository.OutboxEventRepository;
 @ExtendWith(MockitoExtension.class)
 class OrdenServiceImplTest {
     @Mock private OrdenRepository ordenRepository;
-    @Mock private RabbitTemplate rabbitTemplate;
     @Mock private OutboxEventRepository outboxRepository;
     @Mock private ObjectMapper objectMapper;
 
@@ -28,7 +26,7 @@ class OrdenServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new OrdenServiceImpl(ordenRepository, rabbitTemplate, outboxRepository, objectMapper);
+        service = new OrdenServiceImpl(ordenRepository, outboxRepository, objectMapper);
     }
 
     @Test
