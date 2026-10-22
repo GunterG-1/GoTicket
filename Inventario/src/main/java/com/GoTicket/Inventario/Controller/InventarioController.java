@@ -15,12 +15,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.GoTicket.Inventario.Model.Inventario;
 import com.GoTicket.Inventario.Model.ConfirmarReservaRequest;
+import com.GoTicket.Inventario.Model.CancelarReservaRequest;
+import com.GoTicket.Inventario.Model.ReventaDetalles;
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
 import com.GoTicket.Inventario.Model.PublicarReventaRequest;
 import com.GoTicket.Inventario.Model.TransferirEntradaRequest;
 import com.GoTicket.Inventario.Model.SectorDisponibilidad;
 import com.GoTicket.Inventario.Service.InventarioService;
+import com.GoTicket.Inventario.Service.TicketDocumentService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 public class InventarioController {
 
     private final InventarioService inventarioService;
+    private final TicketDocumentService ticketDocumentService;
 
     @GetMapping
     public ResponseEntity<List<Inventario>> listarInventarios() {
@@ -112,13 +116,50 @@ public class InventarioController {
     }
 
     @GetMapping("/usuario/{idUsuario}/entradas")
-    public ResponseEntity<List<Entrada>> listarEntradasDeUsuario(@PathVariable Long idUsuario) {
+    public ResponseEntity<List<com.GoTicket.Inventario.Model.EntradaUsuarioResponse>> listarEntradasDeUsuario(@PathVariable Long idUsuario) {
         return ResponseEntity.ok(inventarioService.listarEntradasDeUsuario(idUsuario));
+    }
+
+    @GetMapping("/usuario/{idUsuario}/entradas/{idEntrada}/pdf")
+    public ResponseEntity<?> descargarEntradaPdf(@PathVariable Long idUsuario, @PathVariable Long idEntrada) {
+        try {
+            byte[] pdf = ticketDocumentService.descargar(idUsuario, idEntrada);
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"goticket-entrada-" + idEntrada + ".pdf\"")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/acceso/validar")
+    public ResponseEntity<?> validarAcceso(@RequestBody java.util.Map<String, String> request) {
+        try {
+            return ResponseEntity.ok(inventarioService.validarAcceso(request.get("codigoAcceso")));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", exception.getMessage()));
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of("error", exception.getMessage()));
+        }
     }
 
     @GetMapping("/reventa")
     public ResponseEntity<List<Entrada>> listarEntradasEnReventa() {
         return ResponseEntity.ok(inventarioService.listarEntradasEnReventa());
+    }
+
+    @GetMapping("/entradas/{idEntrada}/reventa")
+    public ResponseEntity<ReventaDetalles> buscarEntradaEnReventa(@PathVariable Long idEntrada) {
+        try {
+            return ResponseEntity.ok(inventarioService.buscarEntradaEnReventa(idEntrada));
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
     }
 
     @PostMapping("/reservas")
@@ -140,6 +181,26 @@ public class InventarioController {
         }
     }
 
+    @GetMapping("/reservas/{idReserva}")
+    public ResponseEntity<?> buscarReserva(@PathVariable String idReserva) {
+        try {
+            return ResponseEntity.ok(inventarioService.buscarReserva(idReserva));
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(java.util.Map.of("error", exception.getMessage()));
+        }
+    }
+
+    @PostMapping("/reservas/cancelar")
+    public ResponseEntity<?> cancelarReserva(@RequestBody CancelarReservaRequest request) {
+        try {
+            inventarioService.cancelarReserva(request);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", exception.getMessage()));
+        }
+    }
+
     @PostMapping("/entradas/{idEntrada}/reventa")
     public ResponseEntity<?> publicarReventa(@PathVariable Long idEntrada, @RequestBody PublicarReventaRequest request) {
         try {
@@ -158,12 +219,16 @@ public class InventarioController {
         }
     }
 
-    @PostMapping("/entradas/{idEntrada}/transferir")
-    public ResponseEntity<?> transferirEntrada(@PathVariable Long idEntrada, @RequestBody TransferirEntradaRequest request) {
+    @PostMapping("/entradas/{idEntrada}/reventa/cancelar")
+    public ResponseEntity<?> cancelarReservaReventa(
+            @PathVariable Long idEntrada, @RequestBody TransferirEntradaRequest request) {
         try {
-            return ResponseEntity.ok(inventarioService.transferirEntrada(idEntrada, request));
+            inventarioService.cancelarReservaReventa(idEntrada, request);
+            return ResponseEntity.noContent().build();
         } catch (IllegalArgumentException | IllegalStateException exception) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("error", exception.getMessage()));
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", exception.getMessage()));
         }
     }
+
 }

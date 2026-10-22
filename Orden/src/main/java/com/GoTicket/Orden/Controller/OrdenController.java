@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.GoTicket.Orden.Model.Orden;
+import com.GoTicket.Orden.Model.CheckoutRequest;
 import com.GoTicket.Orden.Service.OrdenService;
 
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,18 @@ public class OrdenController {
             return ResponseEntity.status(HttpStatus.CREATED).body(ordenGuardada);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/checkout")
+    public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(ordenService.checkout(request));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", exception.getMessage()));
+        } catch (RuntimeException exception) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", exception.getMessage()));
         }
     }
 

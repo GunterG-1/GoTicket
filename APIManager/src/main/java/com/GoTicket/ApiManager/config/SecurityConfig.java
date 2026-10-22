@@ -47,6 +47,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/proxy/eventos", "/api/proxy/eventos/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/proxy/recintos", "/api/proxy/recintos/**").permitAll()
+                .requestMatchers(HttpMethod.POST,
+                    "/api/proxy/inventarios/reservas/cancelar",
+                    "/api/proxy/inventarios/entradas/*/reventa/cancelar",
+                    "/api/proxy/inventarios/acceso/validar").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST,
                     "/api/proxy/inventarios/reservas",
                     "/api/proxy/inventarios/reservas/confirmar",
@@ -55,8 +60,12 @@ public class SecurityConfig {
                     "/api/proxy/ordenes",
                     "/api/proxy/pagos/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/proxy/eventos", "/api/proxy/inventarios", "/api/proxy/inventarios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/proxy/recintos", "/api/proxy/recintos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/proxy/eventos/*/sectores").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/proxy/eventos/**", "/api/proxy/inventarios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/proxy/recintos/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/proxy/eventos/**", "/api/proxy/inventarios/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/proxy/recintos/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/proxy/ordenes/**", "/api/proxy/pagos/**").hasRole("ADMIN")
                 .requestMatchers("/api/proxy/**").authenticated()
                 .requestMatchers("/api/v1/**").authenticated()

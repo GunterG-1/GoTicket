@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "orden")
+@Table(name = "orden", uniqueConstraints = @UniqueConstraint(
+        name = "uk_orden_reserva", columnNames = "id_reserva"))
 public class Orden {
 
     @Id
@@ -42,6 +44,12 @@ public class Orden {
 
     @Column(name = "id_entrada_reventa")
     private Long idEntradaReventa;
+
+    @Column(name = "id_reserva", length = 36)
+    private String idReserva;
+
+    @Column(name = "expira_reserva")
+    private LocalDateTime expiraReserva;
 
     @Column(name = "total", precision = 10, scale = 2, nullable = false)
     private BigDecimal total;

@@ -1,0 +1,8 @@
+.profile-page h1 { margin: 0 0 24px; color: #2e1065; font: 700 clamp(2.4rem, 6vw, 4rem) 'Space Grotesk'; }
+.profile-form { display: grid; max-width: 640px; gap: 18px; padding: 28px; border: 1px solid #e9d5ff; border-radius: 8px; background: #fff; box-shadow: 0 14px 40px #2e106512; }
+.profile-form label { display: grid; gap: 7px; color: #573779; font-size: .82rem; font-weight: 700; }
+.profile-form input { width: 100%; border: 1px solid #d8c3ec; border-radius: 5px; padding: 12px; color: #24103d; font: inherit; }
+.profile-form input:read-only { background: #f8f5fb; color: #766984; }
+.profile-form .primary-button { justify-self: start; }
+.profile-help { margin: 0; color: #766984; font-size: .78rem; line-height: 1.5; }
+.profile-success { padding: 12px 16px; border: 1px solid #b7d9b6; border-radius: 5px; background: #e9f5e7; color: #286744; }

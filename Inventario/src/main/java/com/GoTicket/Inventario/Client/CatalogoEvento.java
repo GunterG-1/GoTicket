@@ -1,6 +1,7 @@
 package com.GoTicket.Inventario.Client;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record CatalogoEvento(
         Long idEvento,
@@ -8,5 +9,7 @@ public record CatalogoEvento(
         BigDecimal precio,
         String nombre,
         String categoria,
-        String lugar) {
+        String lugar,
+        LocalDateTime fechaInicio,
+        Boolean activo) {
 }

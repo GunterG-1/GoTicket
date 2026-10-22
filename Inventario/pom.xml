@@ -30,6 +30,9 @@
 		<java.version>17</java.version>
 		<springdoc.version>3.0.0</springdoc.version>
 		<aws.sdk.version>2.25.60</aws.sdk.version>
+		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+		<zxing.version>3.5.4</zxing.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -62,6 +65,25 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>${zxing.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>javase</artifactId>
+			<version>${zxing.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>${pdfbox.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>

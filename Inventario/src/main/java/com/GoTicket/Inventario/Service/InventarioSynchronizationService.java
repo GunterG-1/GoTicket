@@ -53,8 +53,9 @@ public class InventarioSynchronizationService {
             inventario.setCantidadDisponible(evento.capacidad());
             inventario.setActivo(true);
             inventario.setFechaActualizacion(LocalDateTime.now());
-            inventarioRepository.save(inventario);
-            creados++;
+            creados += inventarioRepository.crearSiNoExiste(inventario.getIdEvento(),
+                    inventario.getCantidadDisponible(), inventario.getCantidadTotal(),
+                    inventario.getActivo(), inventario.getFechaActualizacion());
         }
 
         if (creados > 0) {

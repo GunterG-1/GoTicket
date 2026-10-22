@@ -1,5 +1,6 @@
 package com.GoTicket.Inventario.Model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
@@ -36,4 +37,10 @@ public class TransferenciaEntrada {
 
     @Column(nullable = false)
     private LocalDateTime fecha;
+
+    @Column(name = "comision_simulada", precision = 10, scale = 2)
+    private BigDecimal comisionSimulada;
+
+    @Column(name = "neto_vendedor_simulado", precision = 10, scale = 2)
+    private BigDecimal netoVendedorSimulado;
 }

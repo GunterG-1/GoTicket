@@ -5,6 +5,7 @@ import com.GoTicket.ApiManager.model.ApiRoute;
 import com.GoTicket.ApiManager.repository.ApiKeyRepository;
 import com.GoTicket.ApiManager.repository.ApiRouteRepository;
 import com.GoTicket.ApiManager.service.ProxyService;
+import com.GoTicket.ApiManager.service.ProxyAuthorizationService;
 import com.GoTicket.ApiManager.service.RateLimiterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,15 +27,18 @@ public class GatewayController {
     private final ApiKeyRepository apiKeyRepository;
     private final RateLimiterService rateLimiterService;
     private final ProxyService proxyService;
+    private final ProxyAuthorizationService proxyAuthorizationService;
 
     public GatewayController(ApiRouteRepository routeRepository,
                              ApiKeyRepository apiKeyRepository,
                              RateLimiterService rateLimiterService,
-                             ProxyService proxyService) {
+                             ProxyService proxyService,
+                             ProxyAuthorizationService proxyAuthorizationService) {
         this.routeRepository = routeRepository;
         this.apiKeyRepository = apiKeyRepository;
         this.rateLimiterService = rateLimiterService;
         this.proxyService = proxyService;
+        this.proxyAuthorizationService = proxyAuthorizationService;
     }
 
     @RequestMapping(value = "/{pattern}/**", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
@@ -54,8 +58,16 @@ public class GatewayController {
             return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, "La API '" + route.getName() + "' se encuentra temporalmente deshabilitada.");
         }
 
-        if (!isAllowedUserResource(request, authentication)) {
-            return errorResponse(HttpStatus.FORBIDDEN, "No puedes consultar recursos de otro usuario");
+        byte[] body;
+        try {
+            body = request.getInputStream().readAllBytes();
+        } catch (java.io.IOException exception) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "No se pudo leer el cuerpo de la solicitud");
+        }
+        String requestPath = request.getRequestURI().substring("/api/proxy".length());
+        org.springframework.http.HttpMethod method = org.springframework.http.HttpMethod.valueOf(request.getMethod());
+        if (!proxyAuthorizationService.isAllowed(method, requestPath, body, authentication)) {
+            return errorResponse(HttpStatus.FORBIDDEN, "No tienes permiso para realizar esta operación");
         }
 
         String apiKeyHeader = request.getHeader("X-API-KEY");
@@ -87,19 +99,7 @@ public class GatewayController {
             remainingPath = requestUri.substring(prefix.length());
         }
 
-        return proxyService.forwardRequest(route, remainingPath, request, apiKeyUsed);
-    }
-
-    private boolean isAllowedUserResource(HttpServletRequest request, Authentication authentication) {
-        String uri = request.getRequestURI();
-        if (authentication == null || authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()))) {
-            return true;
-        }
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("/usuario/(\\d+)").matcher(uri);
-        if (!matcher.find()) return true;
-        String email = authentication.getName();
-        String expectedId = String.valueOf(Math.abs(email.trim().toLowerCase().hashCode()));
-        return expectedId.equals(matcher.group(1));
+        return proxyService.forwardRequest(route, remainingPath, request, apiKeyUsed, body);
     }
 
     private ResponseEntity<byte[]> errorResponse(HttpStatus status, String message) {

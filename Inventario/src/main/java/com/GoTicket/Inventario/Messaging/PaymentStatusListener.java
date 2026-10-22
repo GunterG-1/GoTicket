@@ -6,6 +6,7 @@ import com.GoTicket.Inventario.Repository.EntradaRepository;
 import com.GoTicket.Inventario.Repository.TransferenciaEntradaRepository;
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EstadoEntrada;
+import com.GoTicket.Inventario.Service.TicketNotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class PaymentStatusListener {
     private final EntradaRepository entradaRepository;
     private final TransferenciaEntradaRepository transferenciaRepository;
     private final StringRedisTemplate redisTemplate;
+    private final TicketNotificationService ticketNotificationService;
 
     @Transactional
     public void approved(PaymentStatusEvent event) {
@@ -28,7 +30,10 @@ public class PaymentStatusListener {
             if (EstadoEntrada.VENDIDO.equals(resale.getEstado())
                     && event.idOrden().equals(resale.getIdOrden())) return;
             if (!EstadoEntrada.EN_REVENTA.equals(resale.getEstado())
-                    || (resale.getIdOrden() != null && !event.idOrden().equals(resale.getIdOrden()))) {
+                    || !java.util.Objects.equals(event.idOrden(), resale.getIdOrden())
+                    || !java.util.Objects.equals(event.idUsuario(), resale.getIdUsuarioReserva())
+                    || resale.getExpiraEn() == null
+                    || !resale.getExpiraEn().isAfter(java.time.LocalDateTime.now())) {
                 throw new IllegalStateException("La entrada de reventa ya no está reservada para esta orden");
             }
             Long previousOwner = resale.getIdUsuario();
@@ -37,19 +42,35 @@ public class PaymentStatusListener {
             }
             resale.setIdUsuario(event.idUsuario());
             resale.setEstado(EstadoEntrada.VENDIDO);
+            if (resale.getCodigoAcceso() == null) {
+                resale.setCodigoAcceso(java.util.UUID.randomUUID().toString());
+            }
+            resale.setFechaUso(null);
             resale.setFechaBloqueo(null);
             resale.setExpiraEn(null);
+            resale.setIdUsuarioReserva(null);
+            resale.setIdReserva(null);
             resale.setIdOrden(event.idOrden());
             entradaRepository.save(resale);
+            ticketNotificationService.programar(event.idOrden(), event.idUsuario());
+            java.math.BigDecimal commission = resale.getPrecio()
+                    .multiply(java.math.BigDecimal.valueOf(0.05))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
             transferenciaRepository.save(new com.GoTicket.Inventario.Model.TransferenciaEntrada(
                     null, resale.getIdEntrada(), previousOwner, event.idUsuario(), event.idOrden(),
-                    java.time.LocalDateTime.now()));
+                    java.time.LocalDateTime.now(), commission, resale.getPrecio().subtract(commission)));
             return;
         }
-        entradaRepository.findByIdOrden(event.idOrden()).forEach(entry -> {
+        java.util.List<Entrada> soldEntries = entradaRepository.findByIdOrden(event.idOrden());
+        soldEntries.forEach(entry -> {
             entry.setEstado(EstadoEntrada.VENDIDO);
+            if (entry.getCodigoAcceso() == null) {
+                entry.setCodigoAcceso(java.util.UUID.randomUUID().toString());
+            }
+            entry.setFechaUso(null);
             entry.setFechaBloqueo(null);
             entry.setExpiraEn(null);
+            entry.setIdReserva(null);
             redisTemplate.delete("goticket:entrada:" + entry.getIdEntrada());
             entradaRepository.save(entry);
         });
@@ -57,6 +78,9 @@ public class PaymentStatusListener {
             lock.setResuelto(true);
             bloqueoRepository.save(lock);
         });
+        if (!soldEntries.isEmpty()) {
+            ticketNotificationService.programar(event.idOrden(), event.idUsuario());
+        }
     }
 
     @Transactional
@@ -64,8 +88,12 @@ public class PaymentStatusListener {
         if (event.idEntradaReventa() != null) {
             entradaRepository.findByIdForUpdate(event.idEntradaReventa()).ifPresent(resale -> {
                 if (EstadoEntrada.EN_REVENTA.equals(resale.getEstado())
-                        && event.idOrden().equals(resale.getIdOrden())) {
+                        && event.idOrden().equals(resale.getIdOrden())
+                        && java.util.Objects.equals(event.idUsuario(), resale.getIdUsuarioReserva())) {
                     resale.setIdOrden(null);
+                    resale.setIdUsuarioReserva(null);
+                    resale.setFechaBloqueo(null);
+                    resale.setExpiraEn(null);
                     entradaRepository.save(resale);
                 }
             });
@@ -78,6 +106,7 @@ public class PaymentStatusListener {
             entry.setIdOrden(null);
             entry.setFechaBloqueo(null);
             entry.setExpiraEn(null);
+            entry.setIdReserva(null);
             redisTemplate.delete("goticket:entrada:" + entry.getIdEntrada());
             entradaRepository.save(entry);
         });

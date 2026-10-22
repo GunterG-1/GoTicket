@@ -9,5 +9,7 @@ public record OrderCreatedEvent(
         Integer cantidad,
         BigDecimal total,
         String sector,
-        Long idEntradaReventa) {
+        Long idEntradaReventa,
+        String idReserva,
+        java.time.LocalDateTime expiraReserva) {
 }

@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -38,6 +39,9 @@ public class Entrada {
     @Column(name = "precio", precision = 10, scale = 2, nullable = false)
     private BigDecimal precio;
 
+    @Column(name = "precio_original", precision = 10, scale = 2)
+    private BigDecimal precioOriginal;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoEntrada estado = EstadoEntrada.DISPONIBLE;
@@ -48,9 +52,22 @@ public class Entrada {
     @Column(name = "id_orden")
     private Long idOrden;
 
+    @Column(name = "id_reserva", length = 36)
+    private String idReserva;
+
+    @Column(name = "id_usuario_reserva")
+    private Long idUsuarioReserva;
+
     @Column(name = "fecha_bloqueo")
     private LocalDateTime fechaBloqueo;
 
     @Column(name = "expira_en")
     private LocalDateTime expiraEn;
+
+    @JsonIgnore
+    @Column(name = "codigo_acceso", unique = true, length = 36)
+    private String codigoAcceso;
+
+    @Column(name = "fecha_uso")
+    private LocalDateTime fechaUso;
 }

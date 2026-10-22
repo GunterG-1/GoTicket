@@ -1,6 +1,9 @@
 package com.GoTicket.ApiManager.config;
 
 import com.GoTicket.ApiManager.service.JwtService;
+import com.GoTicket.ApiManager.service.ProxyAuthorizationService;
+import com.GoTicket.ApiManager.service.UsuarioClient;
+import com.GoTicket.ApiManager.model.UsuarioPerfilResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,12 +20,14 @@ import java.nio.charset.StandardCharsets;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtService jwtService;
+    private final UsuarioClient usuarioClient;
 
     @Value("${app.oauth2.frontend-success-url:http://localhost:5173/#oauth2}")
     private String frontendSuccessUrl;
 
-    public OAuth2SuccessHandler(JwtService jwtService) {
+    public OAuth2SuccessHandler(JwtService jwtService, UsuarioClient usuarioClient) {
         this.jwtService = jwtService;
+        this.usuarioClient = usuarioClient;
     }
 
     @Override
@@ -31,23 +36,24 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         OAuth2User user = (OAuth2User) authentication.getPrincipal();
         String email = user.getAttribute("email");
         String name = user.getAttribute("name");
+        String googleSubject = user.getAttribute("sub");
+        if (email == null || email.isBlank() || googleSubject == null || googleSubject.isBlank()) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Google no devolvió una identidad verificable.");
+            return;
+        }
         String role = isAdminEmail(email) ? "ADMIN" : "CLIENTE";
-        String token = jwtService.generateToken(email, name, role);
-        String userId = deriveUserId(email);
+        Long legacyUserId = Long.valueOf(ProxyAuthorizationService.deriveUserId(email));
+        UsuarioPerfilResponse profile = usuarioClient.sincronizarIdentidadGoogle(
+                legacyUserId, googleSubject, email, name == null ? email : name);
+        String token = jwtService.generateToken(profile.idUsuario(), profile.email(), profile.nombre(), role);
+        String userId = String.valueOf(profile.idUsuario());
         String targetUrl = frontendSuccessUrl
             + "?token=" + encode(token)
             + "&idUsuario=" + encode(userId)
-            + "&email=" + encode(email)
-            + "&name=" + encode(name);
+            + "&email=" + encode(profile.email())
+            + "&name=" + encode(profile.nombre());
         clearAuthenticationAttributes(request);
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
-    }
-
-    private String deriveUserId(String email) {
-        if (email == null || email.isBlank()) {
-            return "";
-        }
-        return String.valueOf(Math.abs(email.trim().toLowerCase().hashCode()));
     }
 
     private String encode(String value) {

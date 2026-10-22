@@ -49,6 +49,9 @@ public class Evento {
     @Column(name = "lugar", nullable = false, length = 200)
     private String lugar;
 
+    @Column(name = "id_recinto")
+    private Long idRecinto;
+
     @Column(name = "capacidad")
     private Integer capacidad;
 

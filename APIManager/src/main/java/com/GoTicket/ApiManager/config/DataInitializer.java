@@ -37,6 +37,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         List<ApiRoute> backendRoutes = List.of(
             new ApiRoute("Catálogo de eventos", "eventos", catalogoUrl + "/api/eventos", true, 120, false, "Eventos publicados por el microservicio de catálogo"),
+            new ApiRoute("Recintos", "recintos", catalogoUrl + "/api/recintos", true, 120, false, "Recintos y capacidades configuradas"),
             new ApiRoute("Inventario de entradas", "inventarios", inventarioUrl + "/api/inventarios", true, 120, false, "Disponibilidad por evento"),
             new ApiRoute("Órdenes", "ordenes", ordenUrl + "/api/ordenes", true, 60, false, "Creación y consulta de órdenes"),
             new ApiRoute("Pagos", "pagos", pagosUrl + "/api/pagos", true, 60, false, "Registro y consulta de pagos")

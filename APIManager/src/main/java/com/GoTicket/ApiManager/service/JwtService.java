@@ -39,6 +39,25 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateToken(Long idUsuario, String email, String name, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("idUsuario", String.valueOf(idUsuario));
+        claims.put("email", email);
+        claims.put("name", name);
+        claims.put("role", role);
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+
+        return Jwts.builder()
+                .claims(claims)
+                .subject(String.valueOf(idUsuario))
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
     public Claims extractClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())

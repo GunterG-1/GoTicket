@@ -5,11 +5,15 @@ import java.util.Optional;
 
 import com.GoTicket.Inventario.Model.Inventario;
 import com.GoTicket.Inventario.Model.ConfirmarReservaRequest;
+import com.GoTicket.Inventario.Model.CancelarReservaRequest;
 import com.GoTicket.Inventario.Model.Entrada;
 import com.GoTicket.Inventario.Model.EntradaReservaRequest;
 import com.GoTicket.Inventario.Model.SectorDisponibilidad;
 import com.GoTicket.Inventario.Model.PublicarReventaRequest;
 import com.GoTicket.Inventario.Model.TransferirEntradaRequest;
+import com.GoTicket.Inventario.Model.EntradaUsuarioResponse;
+import com.GoTicket.Inventario.Model.ReservaDetalles;
+import com.GoTicket.Inventario.Model.ReventaDetalles;
 
 public interface InventarioService {
 
@@ -33,17 +37,26 @@ public interface InventarioService {
 
     List<Entrada> listarEntradas(Long idEvento);
 
-    List<Entrada> listarEntradasDeUsuario(Long idUsuario);
+    List<EntradaUsuarioResponse> listarEntradasDeUsuario(Long idUsuario);
+
+    Entrada validarAcceso(String codigoAcceso);
 
     List<Entrada> listarEntradasEnReventa();
+
+    ReventaDetalles buscarEntradaEnReventa(Long idEntrada);
 
     List<Entrada> reservarEntradas(EntradaReservaRequest request);
 
     void confirmarReserva(ConfirmarReservaRequest request);
 
+    void cancelarReserva(CancelarReservaRequest request);
+
+    ReservaDetalles buscarReserva(String idReserva);
+
     Entrada publicarReventa(Long idEntrada, PublicarReventaRequest request);
 
     Entrada reservarReventa(Long idEntrada, TransferirEntradaRequest request);
 
-    Entrada transferirEntrada(Long idEntrada, TransferirEntradaRequest request);
+    void cancelarReservaReventa(Long idEntrada, TransferirEntradaRequest request);
+
 }

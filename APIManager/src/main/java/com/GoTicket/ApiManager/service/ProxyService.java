@@ -4,17 +4,15 @@ import com.GoTicket.ApiManager.model.ApiLog;
 import com.GoTicket.ApiManager.model.ApiRoute;
 import com.GoTicket.ApiManager.repository.ApiLogRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.stream.Collectors;
 
 @Service
 public class ProxyService {
@@ -22,12 +20,16 @@ public class ProxyService {
     private final ApiLogRepository apiLogRepository;
     private final RestTemplate restTemplate;
 
+    @Value("${goticket.internal.api-token:}")
+    private String internalApiToken;
+
     public ProxyService(ApiLogRepository apiLogRepository) {
         this.apiLogRepository = apiLogRepository;
         this.restTemplate = new RestTemplate();
     }
 
-    public ResponseEntity<byte[]> forwardRequest(ApiRoute route, String remainingPath, HttpServletRequest request, String apiKeyUsed) {
+    public ResponseEntity<byte[]> forwardRequest(ApiRoute route, String remainingPath, HttpServletRequest request,
+                                                  String apiKeyUsed, byte[] body) {
         long startTime = System.currentTimeMillis();
         int statusCode = 500;
         byte[] responseBody = new byte[0];
@@ -48,7 +50,7 @@ public class ProxyService {
         try {
             HttpMethod method = HttpMethod.valueOf(request.getMethod());
             HttpHeaders headers = extractHeaders(request);
-            byte[] body = extractBody(request);
+            headers.set("X-GoTicket-Internal-Token", internalApiToken);
 
             HttpEntity<byte[]> httpEntity = new HttpEntity<>(body, headers);
             ResponseEntity<byte[]> response = restTemplate.exchange(
@@ -98,7 +100,8 @@ public class ProxyService {
                 String headerName = headerNames.nextElement();
                 if (!headerName.equalsIgnoreCase("host") &&
                     !headerName.equalsIgnoreCase("content-length") &&
-                    !headerName.equalsIgnoreCase("connection")) {
+                    !headerName.equalsIgnoreCase("connection") &&
+                    !headerName.equalsIgnoreCase("X-GoTicket-Internal-Token")) {
                     headers.put(headerName, Collections.list(request.getHeaders(headerName)));
                 }
             }
@@ -129,15 +132,4 @@ public class ProxyService {
                 || "upgrade".equalsIgnoreCase(headerName);
     }
 
-    private byte[] extractBody(HttpServletRequest request) throws IOException {
-        if ("POST".equalsIgnoreCase(request.getMethod()) ||
-            "PUT".equalsIgnoreCase(request.getMethod()) ||
-            "PATCH".equalsIgnoreCase(request.getMethod())) {
-            try (BufferedReader reader = request.getReader()) {
-                String bodyStr = reader.lines().collect(Collectors.joining(System.lineSeparator()));
-                return bodyStr.getBytes();
-            }
-        }
-        return new byte[0];
-    }
 }

@@ -2,21 +2,32 @@ import { useEffect, useState } from 'react';
 import Navbar from './components/Navbar';
 import ReservationModal from './components/ReservationModal';
 import EventsPage from './pages/EventsPage';
+import EventDetailsPage from './pages/EventDetailsPage';
 import LoginPage from './pages/LoginPage';
 import OrdersPage from './pages/OrdersPage';
 import PaymentsPage from './pages/PaymentsPage';
 import EntriesPage from './pages/EntriesPage';
 import AdminPage from './pages/AdminPage';
+import AccessPage from './pages/AccessPage';
+import ProfilePage from './pages/ProfilePage';
 import { AdminProvider } from './contexts/AdminContext';
 import { clearSession, getSession, isAdminUser, saveSession } from './services/api';
 
 function App() {
   const [session, setSession] = useState(getSession());
   const [locationHash, setLocationHash] = useState(window.location.hash.slice(1) || 'eventos');
+  const [pathname, setPathname] = useState(window.location.pathname);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
-    const handleHashChange = () => setLocationHash(window.location.hash.slice(1) || 'eventos');
+    const handleHashChange = () => {
+      if (window.location.pathname !== '/') {
+        window.history.replaceState(null, '', `/${window.location.hash}`);
+        setPathname('/');
+      }
+      setLocationHash(window.location.hash.slice(1) || 'eventos');
+    };
+    const handlePopState = () => setPathname(window.location.pathname);
     const handleAuthExpired = () => {
       setSession(getSession());
       window.location.hash = 'login';
@@ -33,15 +44,22 @@ function App() {
     };
     consumeOAuthCallback();
     window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('goticket-auth-expired', handleAuthExpired);
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('goticket-auth-expired', handleAuthExpired);
     };
   }, []);
 
-  const [route, query = ''] = locationHash.split('?');
-  const category = new URLSearchParams(query).get('categoria') || 'todos';
+  const [hashRoute, query = ''] = locationHash.split('?');
+  const detailMatch = pathname.match(/^\/evento\/(\d+)\/?$/);
+  const route = detailMatch ? 'evento' : hashRoute;
+  const eventId = detailMatch?.[1];
+  const routeParams = new URLSearchParams(query);
+  const category = routeParams.get('categoria') || 'todos';
+  const searchQuery = routeParams.get('busqueda') || '';
   const admin = isAdminUser(session.user);
 
   function handleLogout() {
@@ -55,16 +73,22 @@ function App() {
     if (!session.token) window.location.hash = 'login';
   }
 
+  function handleEventDetails(event) {
+    const path = `/evento/${event.idEvento}`;
+    window.history.pushState(null, '', path);
+    setPathname(path);
+  }
+
   function handleLogin() {
     window.location.hash = 'login';
   }
 
-  if (route === 'admin' && !admin) {
+  if ((route === 'admin' || route === 'acceso') && !admin) {
     window.location.hash = 'eventos';
     return null;
   }
 
-  if (route === 'login' || (!session.token && (route === 'ordenes' || route === 'pagos' || route === 'entradas' || route === 'admin'))) {
+  if (route === 'login' || (!session.token && ['ordenes', 'pagos', 'entradas', 'admin', 'perfil'].includes(route))) {
     return <LoginPage onLogin={() => { setSession(getSession()); window.location.hash = 'eventos'; }} />;
   }
 
@@ -76,9 +100,15 @@ function App() {
           ? <EntriesPage />
         : route === 'admin'
           ? <AdminPage />
-        : <EventsPage category={category} onReserve={handleReserve} />;
+            : route === 'perfil'
+              ? <ProfilePage />
+            : route === 'acceso'
+            ? <AccessPage />
+              : route === 'evento'
+                ? <EventDetailsPage id={eventId} onReserve={handleReserve} />
+                : <EventsPage category={category} query={searchQuery} onReserve={handleReserve} onDetails={handleEventDetails} />;
 
-      const shell = <div className="app-shell"><Navbar currentRoute={route} currentCategory={category} user={session.user} onLogout={handleLogout} onLogin={handleLogin} /><main>{page}</main>{selectedEvent && session.token && <ReservationModal event={selectedEvent} user={session.user} onClose={() => setSelectedEvent(null)} />}</div>;
+      const shell = <div className="app-shell"><Navbar currentRoute={route} currentCategory={category} initialSearch={searchQuery} user={session.user} onLogout={handleLogout} onLogin={handleLogin} /><main>{page}</main>{selectedEvent && session.token && <ReservationModal event={selectedEvent} user={session.user} onClose={() => setSelectedEvent(null)} onCreated={(order) => { setSelectedEvent(null); window.location.hash = `pagos?orden=${order.idOrden}`; }} />}</div>;
       return route === 'admin' ? <AdminProvider>{shell}</AdminProvider> : shell;
 }
 

@@ -4,5 +4,6 @@ public enum EstadoEntrada {
     DISPONIBLE,
     BLOQUEADO,
     VENDIDO,
-    EN_REVENTA
+    EN_REVENTA,
+    USADA
 }

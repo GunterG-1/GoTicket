@@ -55,8 +55,11 @@ services:
       - .env.backend
     environment:
       SERVER_PORT: 8083
+      INVENTARIO_URL: http://inventario:8082
     ports:
       - "8083:8083"
+    depends_on:
+      - inventario
     networks:
       - backend
 

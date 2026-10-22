@@ -15,7 +15,8 @@ public class PaymentExpirationListener {
     @Transactional
     public void handle(PaymentStatusEvent event) {
         if (event.idOrden() == null) return;
-        pagoRepository.findByIdOrden(event.idOrden()).stream().findFirst().ifPresent(pago -> {
+        pagoRepository.findByIdOrden(event.idOrden()).stream().findFirst()
+                .flatMap(existing -> pagoRepository.findByIdForUpdate(existing.getIdPago())).ifPresent(pago -> {
             if ("PENDIENTE".equalsIgnoreCase(pago.getEstado())) {
                 pago.setEstado("RECHAZADO");
                 pago.setMetodoPago("EXPIRADO");
