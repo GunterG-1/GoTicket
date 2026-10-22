@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -39,6 +40,15 @@ public class TicketNotificationService {
 
     @Value("${goticket.mail.from:noreply@goticket.local}")
     private String from;
+    @Value("${goticket.mail.enabled:false}")
+    private boolean mailEnabled;
+
+    @PostConstruct
+    void logMailDeliveryStatus() {
+        if (!mailEnabled) {
+            LOGGER.warn("El envío de correos está deshabilitado; las notificaciones permanecerán pendientes hasta configurar SMTP.");
+        }
+    }
 
     @Transactional
     public void programar(Long idOrden, Long idUsuario) {
