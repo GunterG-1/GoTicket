@@ -19,6 +19,7 @@ public class OrderCreatedListener {
         payment.setIdEvento(event.idEvento());
         payment.setIdUsuario(event.idUsuario());
         payment.setIdEntradaReventa(event.idEntradaReventa());
+        payment.setExpiraReserva(event.expiraReserva());
         payment.setCantidad(event.cantidad());
         payment.setMonto(event.total());
         payment.setMetodoPago("PENDIENTE");

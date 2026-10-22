@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "pago")
+@Table(name = "pago", uniqueConstraints = @UniqueConstraint(
+        name = "uk_pago_orden", columnNames = "id_orden"))
 public class Pago {
 
     @Id
@@ -36,6 +38,9 @@ public class Pago {
 
     @Column(name = "id_entrada_reventa")
     private Long idEntradaReventa;
+
+    @Column(name = "expira_reserva")
+    private LocalDateTime expiraReserva;
 
     @Column(name = "cantidad")
     private Integer cantidad;
