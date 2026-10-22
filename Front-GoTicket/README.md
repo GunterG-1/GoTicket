@@ -64,9 +64,8 @@ El Compose público construye el frontend y lo sirve con Nginx:
 docker compose --env-file .env.public -f ../docker-compose.public.yml up -d --build frontend
 ```
 
-El frontend usa rutas relativas en producción. Nginx envía `/api`, `/oauth2` y `/login` hacia API Manager.
+El frontend usa rutas relativas en producción. Nginx envía `/api`, `/oauth2` y `/login` hacia API Manager. La configuración de Nginx se procesa al iniciar el contenedor para resolver las rutas de documentación usando `BACKEND_HOST`.
 
 ## Seguridad
 
 No guardes credenciales OAuth, claves privadas ni archivos `.env` en el repositorio.
-

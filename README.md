@@ -2,7 +2,7 @@
 
 GoTicket es una plataforma de venta y reserva de entradas para eventos. El proyecto está dividido en un frontend React, un API Manager y cuatro microservicios Java Spring Boot.
 
-Este documento explica la estructura del proyecto y cómo ejecutarlo en un entorno local con `localhost`. No contiene instrucciones de despliegue en AWS ni de producción.
+Este documento explica la estructura del proyecto y cómo ejecutarlo en un entorno local con `localhost`.
 
 ## Arquitectura del proyecto
 
@@ -41,6 +41,20 @@ Orden/Pagos/Inventario ──► SNS/SQS para eventos
 | `Inventario` | Microservicio de inventario | 8082 | Disponibilidad, reservas y liberación de entradas |
 | `Orden` | Microservicio de órdenes | 8083 | Creación y seguimiento de órdenes |
 | `Pagos` | Microservicio de pagos | 8084 | Procesamiento y estado de pagos |
+
+### Sectores y capacidad de eventos
+
+Los administradores gestionan recintos con ciudad, dirección y capacidad, y configuran en cada uno un mapa reutilizable de sectores, aforo, modalidad, color y posición X/Y (porcentaje del plano). Los mapas iniciales proponen distribuciones según el recinto (estadios, arenas, teatros y espacios abiertos); los eventos existentes heredan esos nombres, colores y posiciones, ajustando el aforo proporcionalmente a su capacidad. Cada evento conserva su precio base como precio inicial de sus sectores, que el administrador puede ajustar por separado. El evento ya no requiere un campo de lugar independiente: el recinto determina su ubicación. La suma de capacidades de los sectores del mapa debe coincidir con el aforo del recinto, y el evento no puede superar la capacidad del recinto. Inventario consulta los sectores y sus precios por evento al publicar disponibilidad y crear entradas. La reserva muestra el plano interactivo con la disponibilidad y los precios reales, sin estimaciones.
+
+La selección actual es por sector. Las posiciones del plano son configurables por el administrador, pero la modalidad `NUMERADO` todavía es solo metadata: no existe selección ni asignación individual de asientos.
+
+### Perfil de cliente
+
+En el primer inicio de sesión se registra el identificador estable de Google y se crea el perfil en MySQL del Catálogo. Para no dejar sin titular las órdenes, pagos y entradas existentes, el ID inicial conserva el valor histórico derivado del correo; los siguientes inicios de sesión vinculan el perfil por el `sub` de Google y mantienen ese ID aunque cambie el correo. El cliente puede guardar RUT chileno y teléfono desde **Mi perfil**. Los endpoints de perfil solo se consumen desde API Manager usando el token interno.
+
+### Entradas PDF y correo
+
+Cuando Inventario procesa un pago aprobado, guarda una notificación pendiente en la misma transacción que emite las entradas. El procesador genera un PDF por entrada con su QR y los envía como adjuntos al correo del perfil. Los envíos fallidos se conservan y se reintentan; el propietario también puede descargar el PDF desde **Mis entradas**. Configura `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` y `MAIL_FROM` en `.env.backend`. Los valores de ejemplo no son credenciales válidas y no se envían correos reales hasta configurar un proveedor SMTP.
 
 ## Tecnologías
 
@@ -82,142 +96,39 @@ git clone https://github.com/GunterG-1/GoTicket.git
 cd GoTicket
 ```
 
-## 2. Preparar MySQL local
+## 2. Preparar y levantar GoTicket localmente
 
-Puedes utilizar una instalación local de MySQL/MariaDB o iniciar un contenedor. La siguiente opción crea una instancia local para desarrollo:
-
-```powershell
-docker run --name goticket-mysql `
-  -e MYSQL_ROOT_PASSWORD=root `
-  -p 3306:3306 `
-  -d mysql:8.0
-```
-
-Espera unos segundos hasta que MySQL acepte conexiones. Los microservicios crean sus bases de datos automáticamente cuando se conectan:
-
-```text
-goticket_catalogo
-goticket_inventario
-goticket_orden
-goticket_pagos
-```
-
-Si ya existe un contenedor con ese nombre, inícialo:
+Desde la raíz del repositorio, crea un `.env.backend` local con secretos aleatorios (el script no sobrescribe un archivo existente):
 
 ```powershell
-docker start goticket-mysql
+.\scripts\prepare-local.ps1
 ```
 
-## 3. Configurar el backend local
+El entorno Compose local incluye MySQL, Redis, LocalStack (SNS/SQS), Mailpit, los cuatro microservicios y API Manager. Los recursos AWS son simulados por LocalStack; no se usan endpoints ni credenciales de AWS reales. Los puertos publicados de MySQL son `3307` en el equipo y `3306` entre contenedores.
 
-El Compose de backend necesita un archivo `.env.backend`. Créalo en la raíz del proyecto:
+Construye y levanta los servicios:
 
 ```powershell
-Copy-Item .env.backend.example .env.backend
+docker compose --env-file .env.backend -f docker-compose.local.yml up -d --build
 ```
 
-Para ejecutar los microservicios dentro de Docker y conectarlos al MySQL publicado en el equipo, edita `.env.backend` con estos valores:
-
-```env
-MYSQL_HOST=host.docker.internal
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=root
-REDIS_HOST=redis
-REDIS_PORT=6379
-AWS_REGION=us-east-1
-GOTICKET_SNS_TOPIC_ARN=
-GOTICKET_ORDEN_PAYMENT_APPROVED_QUEUE_URL=
-GOTICKET_ORDEN_PAYMENT_FAILED_QUEUE_URL=
-GOTICKET_INVENTARIO_ORDER_CREATED_QUEUE_URL=
-GOTICKET_INVENTARIO_PAYMENT_APPROVED_QUEUE_URL=
-GOTICKET_INVENTARIO_PAYMENT_FAILED_QUEUE_URL=
-GOTICKET_PAGOS_ORDER_CREATED_QUEUE_URL=
-GOTICKET_PAGOS_PAYMENT_FAILED_QUEUE_URL=
-GOTICKET_AWS_POLL_MS=1000
-```
-
-`host.docker.internal` es necesario porque los microservicios estarán dentro de Docker y MySQL se publicará en el equipo local.
-
-## 4. Levantar los microservicios
-
-Desde la raíz del repositorio:
-
-```powershell
-docker compose --env-file .env.backend -f docker-compose.backend.yml up -d --build
-```
-
-Este comando inicia:
-
-- Redis.
-- Catálogo.
-- Inventario.
-- Orden.
-- Pagos.
+La inicialización de LocalStack crea el topic SNS, siete colas SQS y sus filtros de eventos. La primera construcción descarga imágenes y dependencias y puede tardar varios minutos.
 
 Revisa el estado:
 
 ```powershell
-docker compose --env-file .env.backend -f docker-compose.backend.yml ps
+docker compose --env-file .env.backend -f docker-compose.local.yml ps
 ```
 
 Consulta los logs:
 
 ```powershell
-docker compose --env-file .env.backend -f docker-compose.backend.yml logs -f catalogo inventario orden pagos
+docker compose --env-file .env.backend -f docker-compose.local.yml logs -f localstack-init catalogo inventario orden pagos apimanager
 ```
 
 Los servicios pueden tardar unos segundos en iniciar mientras se construyen las imágenes y se crean las tablas.
 
-## 5. Levantar el API Manager
-
-### Opción A: ejecutar con Maven
-
-Desde `APIManager`:
-
-```powershell
-cd APIManager
-.\mvnw.cmd spring-boot:run
-```
-
-El API Manager utilizará por defecto:
-
-```text
-http://localhost:8081  Catálogo
-http://localhost:8082  Inventario
-http://localhost:8083  Orden
-http://localhost:8084  Pagos
-```
-
-El gateway estará disponible en:
-
-```text
-http://localhost:8080
-```
-
-Regresa a la raíz cuando termines:
-
-```powershell
-cd ..
-```
-
-### Opción B: ejecutar API Manager con Docker
-
-Si los microservicios están en Docker y publican los puertos en el equipo, puedes iniciar el API Manager así:
-
-```powershell
-docker build -t goticket-apimanager-local .\APIManager
-docker run --rm --name goticket-apimanager-local -p 8080:8080 `
-  -e URI_CATALOGO=http://host.docker.internal:8081 `
-  -e URI_INVENTARIO=http://host.docker.internal:8082 `
-  -e URI_ORDEN=http://host.docker.internal:8083 `
-  -e URI_PAGOS=http://host.docker.internal:8084 `
-  -e CORS_ALLOWED_ORIGINS=http://localhost:5173 `
-  -e FRONTEND_OAUTH_SUCCESS_URL=http://localhost:5173/#oauth2 `
-  goticket-apimanager-local
-```
-
-## 6. Levantar el frontend
+## 3. Levantar el frontend
 
 En otra terminal:
 
@@ -234,6 +145,14 @@ Abre la aplicación en:
 http://localhost:5173
 ```
 
+Para iniciar sesión y comprar, configura `OAUTH2_CLIENT_ID` y `OAUTH2_CLIENT_SECRET` en `.env.backend` con credenciales de Google OAuth cuyo URI de retorno autorizado sea `http://localhost:8080/login/oauth2/code/google`. Luego recrea API Manager para aplicar las variables nuevas:
+
+```powershell
+docker compose --env-file .env.backend -f docker-compose.local.yml up -d --force-recreate apimanager
+```
+
+Sin credenciales OAuth válidas se puede revisar la interfaz y los endpoints públicos, pero las compras requieren un usuario autenticado. Las credenciales locales de reemplazo solo permiten que API Manager arranque; no permiten iniciar sesión con Google.
+
 ## URLs locales
 
 | Recurso | URL |
@@ -248,61 +167,31 @@ http://localhost:5173
 | Inventario | `http://localhost:8082` |
 | Orden | `http://localhost:8083` |
 | Pagos | `http://localhost:8084` |
+| Mailpit (bandeja SMTP local) | `http://localhost:8025` |
+| LocalStack (SNS/SQS local) | `http://localhost:4566` |
+| MySQL desde el equipo | `localhost:3307` |
 
-## Google OAuth2 local
+## Comprobar descuento de inventario
 
-El inicio de sesión con Google es opcional para ejecutar el resto de la aplicación. Para probarlo, registra en Google Cloud Console:
+Después de iniciar sesión, abre un evento y registra el valor `cantidadDisponible` en `GET http://localhost:8080/api/proxy/inventarios/evento/{idEvento}`. Completa un checkout de una entrada y vuelve a consultar el mismo endpoint: la disponibilidad agregada debe bajar en uno. La reserva temporal se crea primero; al confirmarse el checkout, Inventario descuenta el stock. Si el pago se rechaza o vence la reserva, el flujo de liberación devuelve la disponibilidad. La disponibilidad detallada por sector también se consulta en `GET http://localhost:8080/api/proxy/inventarios/evento/{idEvento}/sectores`.
 
-```text
-http://localhost:8080/login/oauth2/code/google
-```
-
-Antes de iniciar el API Manager, configura las credenciales en PowerShell:
-
-```powershell
-$env:OAUTH2_CLIENT_ID="tu-client-id"
-$env:OAUTH2_CLIENT_SECRET="tu-client-secret"
-.\mvnw.cmd spring-boot:run
-```
-
-El login comienza en:
-
-```text
-http://localhost:8080/oauth2/authorization/google
-```
-
-No guardes el `client secret` en Git ni en archivos versionados.
-
-## SNS/SQS en desarrollo local
-
-El proyecto está preparado para publicar y consumir eventos mediante SNS/SQS. Para que funcionen los flujos completos de orden, inventario y pagos en local se necesitan:
-
-1. Credenciales AWS disponibles para la aplicación.
-2. El topic SNS.
-3. Las colas SQS y sus URLs.
-4. Las variables correspondientes en `.env.backend`.
-
-Si las variables de SNS/SQS se dejan vacías, los servicios pueden iniciar para probar endpoints y persistencia, pero los flujos asíncronos entre órdenes, pagos e inventario no estarán disponibles.
+Los correos generados localmente no se envían a destinatarios reales: revisa los mensajes y PDFs adjuntos en [Mailpit](http://localhost:8025).
 
 ## Detener el proyecto
 
 Detener los microservicios:
 
 ```powershell
-docker compose --env-file .env.backend -f docker-compose.backend.yml down
+docker compose --env-file .env.backend -f docker-compose.local.yml down
 ```
 
 Detenerlos y eliminar los datos persistidos de Redis:
 
 ```powershell
-docker compose --env-file .env.backend -f docker-compose.backend.yml down -v
+docker compose --env-file .env.backend -f docker-compose.local.yml down -v
 ```
 
-Detener MySQL:
-
-```powershell
-docker stop goticket-mysql
-```
+`down -v` elimina las bases locales y Redis: úsalo solo si quieres borrar los datos de prueba.
 
 ## Ejecución de pruebas y compilación
 
@@ -333,7 +222,7 @@ Verifica que el contenedor esté activo:
 docker ps
 ```
 
-Desde un microservicio Docker, `MYSQL_HOST` debe ser `host.docker.internal`, no `localhost`.
+En el Compose local, los servicios usan el hostname `mysql` y el puerto interno `3306`. El puerto publicado `3307` es solo para conectarse desde el equipo anfitrión.
 
 ### El API Manager no encuentra un microservicio
 

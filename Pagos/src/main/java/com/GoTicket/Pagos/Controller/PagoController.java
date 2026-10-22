@@ -57,11 +57,11 @@ public class PagoController {
         }
     }
 
-    @PostMapping("/{id}/procesar")
-    public ResponseEntity<?> procesarPago(@PathVariable Long id, @RequestBody ProcesarPagoRequest solicitud) {
+    @PostMapping("/{id}/simular")
+    public ResponseEntity<?> simularPago(@PathVariable Long id, @RequestBody SimularPagoRequest solicitud) {
         try {
-            return ResponseEntity.ok(pagoService.procesarPago(id, solicitud.numeroTarjeta(), solicitud.vencimiento(),
-                    solicitud.cvv(), solicitud.titular()));
+            return ResponseEntity.ok(pagoService.simularPago(id, solicitud.aprobar(), solicitud.idUsuario(),
+                    solicitud.metodoPago(), solicitud.marcaTarjeta(), solicitud.ultimosCuatro()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }

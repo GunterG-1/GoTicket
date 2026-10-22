@@ -15,7 +15,7 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 public class AwsMessagingConfig {
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        return new ObjectMapper().findAndRegisterModules();
     }
 
     @Bean

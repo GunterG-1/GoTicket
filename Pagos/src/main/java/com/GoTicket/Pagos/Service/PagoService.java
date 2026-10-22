@@ -17,7 +17,10 @@ public interface PagoService {
 
     Pago guardarPago(Pago pago);
 
-    Pago procesarPago(Long id, String numeroTarjeta, String vencimiento, String cvv, String titular);
+    Pago simularPago(Long id, boolean aprobar, Long idUsuario);
+
+    Pago simularPago(Long id, boolean aprobar, Long idUsuario, String metodoPago,
+            String marcaTarjeta, String ultimosCuatro);
 
     Pago actualizarPago(Long id, Pago pago);
 

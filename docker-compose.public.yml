@@ -23,6 +23,10 @@ services:
         VITE_API_MANAGER_URL: ""
     container_name: goticket_frontend
     restart: unless-stopped
+    env_file:
+      - .env.public
+    environment:
+      NGINX_ENVSUBST_FILTER: ^BACKEND_HOST$
     ports:
       - "80:80"
     depends_on:
